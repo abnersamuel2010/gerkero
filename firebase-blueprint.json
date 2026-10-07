@@ -1,0 +1,398 @@
+{
+  "entities": {
+    "Usuario": {
+      "title": "Usuario",
+      "description": "Usuário ou funcionário do sistema do restaurante com controle de acesso por função",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "nome": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 160 },
+        "funcao": { "type": "string", "enum": ["administrador", "caixa", "atendente", "cozinha", "entregador"] },
+        "bloqueado": { "type": "boolean" },
+        "permissoes": { "type": "string", "maxLength": 500 },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["uid", "nome", "email", "funcao", "bloqueado", "criadoEm"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Cadastro de clientes do restaurante e delivery",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 120 },
+        "telefone": { "type": "string", "maxLength": 30 },
+        "endereco": { "type": "string", "maxLength": 250 },
+        "regiaoId": { "type": "string", "maxLength": 128 },
+        "regiaoNome": { "type": "string", "maxLength": 100 },
+        "totalPedidos": { "type": "number" },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "telefone", "endereco", "criadoEm"]
+    },
+    "Categoria": {
+      "title": "Categoria",
+      "description": "Categoria de produtos do cardápio",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 80 },
+        "ordem": { "type": "number" },
+        "ativo": { "type": "boolean" },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "ordem", "ativo", "criadoEm"]
+    },
+    "Produto": {
+      "title": "Produto",
+      "description": "Item do cardápio (Marmitas, Carnes, Acompanhamentos, Bebidas, Porções, Adicionais, Buffet, Outros)",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 120 },
+        "categoria": { "type": "string", "enum": ["Marmitas", "Carnes", "Carnes Especiais", "Acompanhamentos", "Bebidas", "Porções", "Adicionais", "Buffet", "Outros"] },
+        "descricao": { "type": "string", "maxLength": 400 },
+        "preco": { "type": "number" },
+        "imagemUrl": { "type": "string", "maxLength": 600 },
+        "disponivel": { "type": "boolean" },
+        "ativo": { "type": "boolean" },
+        "ehDadoDemonstracao": { "type": "boolean" },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "categoria", "descricao", "preco", "disponivel", "ativo", "criadoEm"]
+    },
+    "Mesa": {
+      "title": "Mesa",
+      "description": "Mesa física do salão do restaurante",
+      "type": "object",
+      "properties": {
+        "numero": { "type": "number" },
+        "status": { "type": "string", "enum": ["livre", "ocupada", "aguardando_pagamento", "reservada"] },
+        "capacidade": { "type": "number" },
+        "pessoas": { "type": "number" },
+        "comandaId": { "type": "string", "maxLength": 128 },
+        "clienteReserva": { "type": "string", "maxLength": 120 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["numero", "status", "capacidade", "pessoas", "atualizadoEm"]
+    },
+    "Comanda": {
+      "title": "Comanda",
+      "description": "Comanda digital vinculada a uma mesa",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string", "maxLength": 40 },
+        "mesaId": { "type": "string", "maxLength": 128 },
+        "mesaNumero": { "type": "number" },
+        "status": { "type": "string", "enum": ["aberta", "aguardando_pagamento", "fechada", "cancelada"] },
+        "pessoas": { "type": "number" },
+        "tipoBuffet": { "type": "string", "maxLength": 60 },
+        "valorPorPessoaBuffet": { "type": "number" },
+        "valorBuffetTotal": { "type": "number" },
+        "subtotalItens": { "type": "number" },
+        "total": { "type": "number" },
+        "criadoPor": { "type": "string", "maxLength": 128 },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["codigo", "mesaId", "mesaNumero", "status", "pessoas", "total", "criadoEm"]
+    },
+    "ItemComanda": {
+      "title": "ItemComanda",
+      "description": "Item individual lançado em uma comanda de mesa",
+      "type": "object",
+      "properties": {
+        "comandaId": { "type": "string", "maxLength": 128 },
+        "mesaNumero": { "type": "number" },
+        "produtoId": { "type": "string", "maxLength": 128 },
+        "produtoNome": { "type": "string", "maxLength": 140 },
+        "categoria": { "type": "string", "maxLength": 60 },
+        "quantidade": { "type": "number" },
+        "valorUnitario": { "type": "number" },
+        "total": { "type": "number" },
+        "observacao": { "type": "string", "maxLength": 240 },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["comandaId", "mesaNumero", "produtoId", "produtoNome", "quantidade", "valorUnitario", "total", "criadoEm"]
+    },
+    "Pedido": {
+      "title": "Pedido",
+      "description": "Pedido de Delivery, Balcão ou Marmita",
+      "type": "object",
+      "properties": {
+        "numero": { "type": "number" },
+        "origem": { "type": "string", "enum": ["delivery", "marmita", "balcao", "mesa"] },
+        "status": { "type": "string", "enum": ["novo", "confirmando", "em_preparo", "pronto", "saiu_para_entrega", "entregue", "cancelado"] },
+        "clienteNome": { "type": "string", "maxLength": 120 },
+        "clienteTelefone": { "type": "string", "maxLength": 30 },
+        "enderecoEntrega": { "type": "string", "maxLength": 250 },
+        "regiaoId": { "type": "string", "maxLength": 128 },
+        "regiaoNome": { "type": "string", "maxLength": 100 },
+        "taxaEntrega": { "type": "number" },
+        "formaPagamento": { "type": "string", "enum": ["dinheiro", "pix", "cartao_debito", "cartao_credito"] },
+        "trocoPara": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "total": { "type": "number" },
+        "resumoItens": { "type": "string", "maxLength": 800 },
+        "qtdMarmitas": { "type": "number" },
+        "observacoes": { "type": "string", "maxLength": 300 },
+        "entregadorId": { "type": "string", "maxLength": 128 },
+        "entregadorNome": { "type": "string", "maxLength": 120 },
+        "pago": { "type": "boolean" },
+        "criadoPor": { "type": "string", "maxLength": 128 },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["numero", "origem", "status", "clienteNome", "formaPagamento", "subtotal", "total", "criadoEm"]
+    },
+    "ItemPedido": {
+      "title": "ItemPedido",
+      "description": "Item detalhado vinculado a um pedido",
+      "type": "object",
+      "properties": {
+        "pedidoId": { "type": "string", "maxLength": 128 },
+        "numeroPedido": { "type": "number" },
+        "tipo": { "type": "string", "enum": ["marmita", "produto", "buffet"] },
+        "nome": { "type": "string", "maxLength": 160 },
+        "tamanhoMarmita": { "type": "string", "maxLength": 40 },
+        "carnes": { "type": "string", "maxLength": 250 },
+        "acompanhamentos": { "type": "string", "maxLength": 350 },
+        "adicionais": { "type": "string", "maxLength": 250 },
+        "bebidas": { "type": "string", "maxLength": 200 },
+        "quantidade": { "type": "number" },
+        "valorUnitario": { "type": "number" },
+        "total": { "type": "number" },
+        "observacao": { "type": "string", "maxLength": 240 },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["pedidoId", "numeroPedido", "tipo", "nome", "quantidade", "valorUnitario", "total", "criadoEm"]
+    },
+    "Pagamento": {
+      "title": "Pagamento",
+      "description": "Registro financeiro de pagamento recebido",
+      "type": "object",
+      "properties": {
+        "referenciaId": { "type": "string", "maxLength": 128 },
+        "tipoReferencia": { "type": "string", "enum": ["pedido", "comanda", "avulso"] },
+        "caixaId": { "type": "string", "maxLength": 128 },
+        "formaPagamento": { "type": "string", "enum": ["dinheiro", "pix", "cartao_debito", "cartao_credito"] },
+        "valor": { "type": "number" },
+        "troco": { "type": "number" },
+        "registradoPor": { "type": "string", "maxLength": 120 },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["referenciaId", "tipoReferencia", "formaPagamento", "valor", "criadoEm"]
+    },
+    "Caixa": {
+      "title": "Caixa",
+      "description": "Sessão de abertura e fechamento de caixa diário",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["aberto", "fechado"] },
+        "saldoInicial": { "type": "number" },
+        "totalDinheiro": { "type": "number" },
+        "totalPix": { "type": "number" },
+        "totalCartaoDebito": { "type": "number" },
+        "totalCartaoCredito": { "type": "number" },
+        "totalEntradasExtras": { "type": "number" },
+        "totalSaidasSangrias": { "type": "number" },
+        "valorInformadoFechamento": { "type": "number" },
+        "diferencaFechamento": { "type": "number" },
+        "abertoPor": { "type": "string", "maxLength": 120 },
+        "fechadoPor": { "type": "string", "maxLength": 120 },
+        "abertoEm": { "type": "string", "maxLength": 40 },
+        "fechadoEm": { "type": "string", "maxLength": 40 },
+        "observacoes": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["status", "saldoInicial", "totalDinheiro", "totalPix", "totalCartaoDebito", "totalCartaoCredito", "abertoPor", "abertoEm"]
+    },
+    "MovimentacaoCaixa": {
+      "title": "MovimentacaoCaixa",
+      "description": "Movimentação financeira no caixa (abertura, venda, entrada, retirada, sangria, fechamento)",
+      "type": "object",
+      "properties": {
+        "caixaId": { "type": "string", "maxLength": 128 },
+        "tipo": { "type": "string", "enum": ["abertura", "venda", "entrada", "retirada", "sangria", "fechamento"] },
+        "formaPagamento": { "type": "string", "enum": ["dinheiro", "pix", "cartao_debito", "cartao_credito"] },
+        "valor": { "type": "number" },
+        "descricao": { "type": "string", "maxLength": 240 },
+        "usuarioNome": { "type": "string", "maxLength": 120 },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["caixaId", "tipo", "formaPagamento", "valor", "descricao", "criadoEm"]
+    },
+    "Entregador": {
+      "title": "Entregador",
+      "description": "Entregador/motoboy cadastrado no restaurante",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 120 },
+        "telefone": { "type": "string", "maxLength": 30 },
+        "status": { "type": "string", "enum": ["disponivel", "em_entrega", "indisponivel"] },
+        "veiculo": { "type": "string", "maxLength": 80 },
+        "entregasRealizadas": { "type": "number" },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "telefone", "status", "criadoEm"]
+    },
+    "Entrega": {
+      "title": "Entrega",
+      "description": "Registro de entrega atribuída a um entregador",
+      "type": "object",
+      "properties": {
+        "pedidoId": { "type": "string", "maxLength": 128 },
+        "numeroPedido": { "type": "number" },
+        "entregadorId": { "type": "string", "maxLength": 128 },
+        "entregadorNome": { "type": "string", "maxLength": 120 },
+        "clienteNome": { "type": "string", "maxLength": 120 },
+        "clienteTelefone": { "type": "string", "maxLength": 30 },
+        "endereco": { "type": "string", "maxLength": 250 },
+        "regiaoNome": { "type": "string", "maxLength": 100 },
+        "taxaEntrega": { "type": "number" },
+        "valorTotalPedido": { "type": "number" },
+        "formaPagamento": { "type": "string", "maxLength": 40 },
+        "status": { "type": "string", "enum": ["atribuida", "saiu_para_entrega", "entregue", "cancelada"] },
+        "atribuidoEm": { "type": "string", "maxLength": 40 },
+        "entregueEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["pedidoId", "numeroPedido", "entregadorId", "entregadorNome", "clienteNome", "endereco", "status", "atribuidoEm"]
+    },
+    "RegiaoEntrega": {
+      "title": "RegiaoEntrega",
+      "description": "Região e taxa de entrega configurada pelo administrador",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 100 },
+        "taxa": { "type": "number" },
+        "tempoEstimadoMin": { "type": "number" },
+        "ativo": { "type": "boolean" },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "taxa", "ativo", "criadoEm"]
+    },
+    "PedidoCozinha": {
+      "title": "PedidoCozinha",
+      "description": "Ordem de produção exibida no KDS da Cozinha",
+      "type": "object",
+      "properties": {
+        "referenciaId": { "type": "string", "maxLength": 128 },
+        "numero": { "type": "number" },
+        "origem": { "type": "string", "enum": ["delivery", "marmita", "mesa", "balcao"] },
+        "identificacao": { "type": "string", "maxLength": 120 },
+        "itensTexto": { "type": "string", "maxLength": 800 },
+        "observacoes": { "type": "string", "maxLength": 300 },
+        "status": { "type": "string", "enum": ["novo", "em_preparo", "pronto", "finalizado"] },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["referenciaId", "numero", "origem", "identificacao", "itensTexto", "status", "criadoEm"]
+    },
+    "Configuracao": {
+      "title": "Configuracao",
+      "description": "Configurações globais de preços de marmitas, buffet e dados do restaurante",
+      "type": "object",
+      "properties": {
+        "nomeRestaurante": { "type": "string", "maxLength": 120 },
+        "telefoneRestaurante": { "type": "string", "maxLength": 30 },
+        "enderecoRestaurante": { "type": "string", "maxLength": 240 },
+        "cnpj": { "type": "string", "maxLength": 30 },
+        "precoMarmitaP": { "type": "number" },
+        "precoMarmitaM": { "type": "number" },
+        "precoMarmitaG": { "type": "number" },
+        "precoBuffetAdulto": { "type": "number" },
+        "precoBuffetCrianca": { "type": "number" },
+        "precoBuffetKilo": { "type": "number" },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nomeRestaurante", "precoMarmitaP", "precoMarmitaM", "precoMarmitaG", "precoBuffetAdulto", "precoBuffetCrianca", "atualizadoEm"]
+    },
+    "LogAuditoria": {
+      "title": "LogAuditoria",
+      "description": "Registro de auditoria de operações críticas do sistema",
+      "type": "object",
+      "properties": {
+        "acao": { "type": "string", "maxLength": 100 },
+        "detalhes": { "type": "string", "maxLength": 400 },
+        "usuarioId": { "type": "string", "maxLength": 128 },
+        "usuarioNome": { "type": "string", "maxLength": 120 },
+        "criadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["acao", "detalhes", "usuarioId", "usuarioNome", "criadoEm"]
+    }
+  },
+  "firestore": {
+    "/usuarios/{userId}": {
+      "schema": { "$ref": "#/entities/Usuario" },
+      "description": "Usuários do sistema e permissões"
+    },
+    "/clientes/{clienteId}": {
+      "schema": { "$ref": "#/entities/Cliente" },
+      "description": "Cadastro de clientes do delivery e salão"
+    },
+    "/categorias/{categoriaId}": {
+      "schema": { "$ref": "#/entities/Categoria" },
+      "description": "Categorias do cardápio"
+    },
+    "/produtos/{produtoId}": {
+      "schema": { "$ref": "#/entities/Produto" },
+      "description": "Produtos e itens do cardápio"
+    },
+    "/mesas/{mesaId}": {
+      "schema": { "$ref": "#/entities/Mesa" },
+      "description": "Mapa de mesas do restaurante"
+    },
+    "/comandas/{comandaId}": {
+      "schema": { "$ref": "#/entities/Comanda" },
+      "description": "Comandas abertas e fechadas das mesas"
+    },
+    "/itensComanda/{itemId}": {
+      "schema": { "$ref": "#/entities/ItemComanda" },
+      "description": "Itens individuais lançados nas comandas"
+    },
+    "/pedidos/{pedidoId}": {
+      "schema": { "$ref": "#/entities/Pedido" },
+      "description": "Pedidos de delivery, marmita e balcão"
+    },
+    "/itensPedido/{itemId}": {
+      "schema": { "$ref": "#/entities/ItemPedido" },
+      "description": "Itens detalhados de cada pedido"
+    },
+    "/pagamentos/{pagamentoId}": {
+      "schema": { "$ref": "#/entities/Pagamento" },
+      "description": "Pagamentos recebidos"
+    },
+    "/caixas/{caixaId}": {
+      "schema": { "$ref": "#/entities/Caixa" },
+      "description": "Sessões de caixa diário"
+    },
+    "/movimentacoesCaixa/{movId}": {
+      "schema": { "$ref": "#/entities/MovimentacaoCaixa" },
+      "description": "Movimentações financeiras do caixa"
+    },
+    "/entregadores/{entregadorId}": {
+      "schema": { "$ref": "#/entities/Entregador" },
+      "description": "Cadastro de entregadores"
+    },
+    "/entregas/{entregaId}": {
+      "schema": { "$ref": "#/entities/Entrega" },
+      "description": "Entregas atribuídas aos entregadores"
+    },
+    "/regioesEntrega/{regiaoId}": {
+      "schema": { "$ref": "#/entities/RegiaoEntrega" },
+      "description": "Regiões e taxas de entrega"
+    },
+    "/pedidosCozinha/{cozinhaId}": {
+      "schema": { "$ref": "#/entities/PedidoCozinha" },
+      "description": "Fila de preparo da cozinha (KDS)"
+    },
+    "/configuracoes/{configId}": {
+      "schema": { "$ref": "#/entities/Configuracao" },
+      "description": "Configurações gerais do restaurante"
+    },
+    "/logsAuditoria/{logId}": {
+      "schema": { "$ref": "#/entities/LogAuditoria" },
+      "description": "Logs de auditoria de segurança"
+    }
+  }
+}

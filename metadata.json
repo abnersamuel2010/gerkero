@@ -1,0 +1,6 @@
+{
+  "name": "Sabor & Brasa — Sistema de Gestão de Restaurante",
+  "description": "Sistema completo e profissional de gerenciamento de restaurante em tempo real com Marmitas, Delivery estilo iFood, Mesas, Comandas, Buffet, Cozinha KDS, Caixa e Relatórios integrado ao Firebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

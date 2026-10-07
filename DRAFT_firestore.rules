@@ -1,0 +1,543 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        (request.auth.token.email == 'robertokeylatomaz@gmail.com' ||
+         request.auth.token.email == 'zoomoplayer@gmail.com' ||
+         (request.auth.token.email is string && request.auth.token.email.size() > 0));
+    }
+
+    function hasRole(roleName) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao == roleName &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.bloqueado != true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        !exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.funcao == 'administrador' ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.bloqueado != true
+      );
+    }
+
+    function isActiveStaff() {
+      return isSignedIn() && (
+        isAdmin() ||
+        !exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.bloqueado != true
+      );
+    }
+
+    // Validation Blueprints
+    function isValidUsuario(data) {
+      return data.keys().hasAll(['uid', 'nome', 'email', 'funcao', 'bloqueado', 'criadoEm']) &&
+        data.keys().hasOnly(['uid', 'nome', 'email', 'funcao', 'bloqueado', 'permissoes', 'criadoEm', 'atualizadoEm']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.funcao is string && data.funcao in ['administrador', 'caixa', 'atendente', 'cozinha', 'entregador'] &&
+        data.bloqueado is bool &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('permissoes' in data) || (data.permissoes is string && data.permissoes.size() <= 500)) &&
+        (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
+    }
+
+    function isValidCliente(data) {
+      return data.keys().hasAll(['nome', 'telefone', 'endereco', 'criadoEm']) &&
+        data.keys().hasOnly(['nome', 'telefone', 'endereco', 'regiaoId', 'regiaoNome', 'totalPedidos', 'criadoEm']) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 120 &&
+        data.telefone is string && data.telefone.size() >= 3 && data.telefone.size() <= 30 &&
+        data.endereco is string && data.endereco.size() >= 2 && data.endereco.size() <= 250 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('regiaoId' in data) || (data.regiaoId is string && data.regiaoId.size() <= 128)) &&
+        (!('regiaoNome' in data) || (data.regiaoNome is string && data.regiaoNome.size() <= 100)) &&
+        (!('totalPedidos' in data) || (data.totalPedidos is number && data.totalPedidos >= 0));
+    }
+
+    function isValidCategoria(data) {
+      return data.keys().hasAll(['nome', 'ordem', 'ativo', 'criadoEm']) &&
+        data.keys().hasOnly(['nome', 'ordem', 'ativo', 'criadoEm']) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 80 &&
+        data.ordem is number && data.ordem >= 0 &&
+        data.ativo is bool &&
+        data.criadoEm is string && data.criadoEm.size() <= 40;
+    }
+
+    function isValidProduto(data) {
+      return data.keys().hasAll(['nome', 'categoria', 'descricao', 'preco', 'disponivel', 'ativo', 'criadoEm']) &&
+        data.keys().hasOnly(['nome', 'categoria', 'descricao', 'preco', 'imagemUrl', 'disponivel', 'ativo', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'ehDadoDemonstracao', 'criadoEm', 'atualizadoEm']) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 120 &&
+        data.categoria is string && data.categoria in ['Marmitas', 'Carnes', 'Carnes Especiais', 'Acompanhamentos', 'Bebidas', 'Porções', 'Adicionais', 'Buffet', 'Doces e Sobremesas', 'Saladas Avulsas', 'Outros'] &&
+        data.descricao is string && data.descricao.size() <= 400 &&
+        data.preco is number && data.preco >= 0 &&
+        data.disponivel is bool &&
+        data.ativo is bool &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('imagemUrl' in data) || (data.imagemUrl is string && data.imagemUrl.size() <= 600)) &&
+        (!('estoque' in data) || (data.estoque is number && data.estoque >= 0)) &&
+        (!('diasSemana' in data) || (data.diasSemana is list)) &&
+        (!('ehEspecial' in data) || (data.ehEspecial is bool)) &&
+        (!('exigeSegundaCarne' in data) || (data.exigeSegundaCarne is bool)) &&
+        (!('ehDadoDemonstracao' in data) || (data.ehDadoDemonstracao is bool)) &&
+        (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
+    }
+
+    function isValidMesa(data) {
+      return data.keys().hasAll(['numero', 'status', 'capacidade', 'pessoas', 'atualizadoEm']) &&
+        data.keys().hasOnly(['numero', 'status', 'capacidade', 'pessoas', 'comandaId', 'clienteReserva', 'atualizadoEm']) &&
+        data.numero is number && data.numero >= 1 &&
+        data.status is string && data.status in ['livre', 'ocupada', 'aguardando_pagamento', 'reservada'] &&
+        data.capacidade is number && data.capacidade >= 1 &&
+        data.pessoas is number && data.pessoas >= 0 &&
+        data.atualizadoEm is string && data.atualizadoEm.size() <= 40 &&
+        (!('comandaId' in data) || (data.comandaId is string && data.comandaId.size() <= 128)) &&
+        (!('clienteReserva' in data) || (data.clienteReserva is string && data.clienteReserva.size() <= 120));
+    }
+
+    function isValidComanda(data) {
+      return data.keys().hasAll(['codigo', 'mesaId', 'mesaNumero', 'status', 'pessoas', 'total', 'criadoEm']) &&
+        data.keys().hasOnly(['codigo', 'mesaId', 'mesaNumero', 'status', 'pessoas', 'tipoBuffet', 'valorPorPessoaBuffet', 'valorBuffetTotal', 'subtotalItens', 'total', 'criadoPor', 'criadoEm', 'atualizadoEm']) &&
+        data.codigo is string && data.codigo.size() >= 1 && data.codigo.size() <= 40 &&
+        data.mesaId is string && data.mesaId.size() >= 1 && data.mesaId.size() <= 128 &&
+        data.mesaNumero is number && data.mesaNumero >= 1 &&
+        data.status is string && data.status in ['aberta', 'aguardando_pagamento', 'fechada', 'cancelada'] &&
+        data.pessoas is number && data.pessoas >= 1 &&
+        data.total is number && data.total >= 0 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('tipoBuffet' in data) || (data.tipoBuffet is string && data.tipoBuffet.size() <= 60)) &&
+        (!('valorPorPessoaBuffet' in data) || (data.valorPorPessoaBuffet is number && data.valorPorPessoaBuffet >= 0)) &&
+        (!('valorBuffetTotal' in data) || (data.valorBuffetTotal is number && data.valorBuffetTotal >= 0)) &&
+        (!('subtotalItens' in data) || (data.subtotalItens is number && data.subtotalItens >= 0)) &&
+        (!('criadoPor' in data) || (data.criadoPor is string && data.criadoPor.size() <= 128)) &&
+        (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
+    }
+
+    function isValidItemComanda(data) {
+      return data.keys().hasAll(['comandaId', 'mesaNumero', 'produtoId', 'produtoNome', 'quantidade', 'valorUnitario', 'total', 'criadoEm']) &&
+        data.keys().hasOnly(['comandaId', 'mesaNumero', 'produtoId', 'produtoNome', 'categoria', 'quantidade', 'valorUnitario', 'total', 'observacao', 'criadoEm']) &&
+        data.comandaId is string && data.comandaId.size() >= 1 && data.comandaId.size() <= 128 &&
+        data.mesaNumero is number && data.mesaNumero >= 1 &&
+        data.produtoId is string && data.produtoId.size() >= 1 && data.produtoId.size() <= 128 &&
+        data.produtoNome is string && data.produtoNome.size() >= 1 && data.produtoNome.size() <= 140 &&
+        data.quantidade is number && data.quantidade >= 1 &&
+        data.valorUnitario is number && data.valorUnitario >= 0 &&
+        data.total is number && data.total >= 0 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('categoria' in data) || (data.categoria is string && data.categoria.size() <= 60)) &&
+        (!('observacao' in data) || (data.observacao is string && data.observacao.size() <= 240));
+    }
+
+    function isValidPedido(data) {
+      return data.keys().hasAll(['numero', 'origem', 'status', 'clienteNome', 'formaPagamento', 'subtotal', 'total', 'criadoEm']) &&
+        data.keys().hasOnly(['numero', 'origem', 'status', 'clienteNome', 'clienteTelefone', 'enderecoEntrega', 'regiaoId', 'regiaoNome', 'taxaEntrega', 'formaPagamento', 'trocoPara', 'subtotal', 'total', 'resumoItens', 'qtdMarmitas', 'observacoes', 'entregadorId', 'entregadorNome', 'pago', 'criadoPor', 'criadoEm', 'atualizadoEm']) &&
+        data.numero is number && data.numero >= 1 &&
+        data.origem is string && data.origem in ['delivery', 'marmita', 'balcao', 'mesa'] &&
+        data.status is string && data.status in ['novo', 'confirmando', 'em_preparo', 'pronto', 'saiu_para_entrega', 'entregue', 'cancelado'] &&
+        data.clienteNome is string && data.clienteNome.size() >= 1 && data.clienteNome.size() <= 120 &&
+        data.formaPagamento is string && data.formaPagamento in ['dinheiro', 'pix', 'cartao_debito', 'cartao_credito'] &&
+        data.subtotal is number && data.subtotal >= 0 &&
+        data.total is number && data.total >= 0 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('clienteTelefone' in data) || (data.clienteTelefone is string && data.clienteTelefone.size() <= 30)) &&
+        (!('enderecoEntrega' in data) || (data.enderecoEntrega is string && data.enderecoEntrega.size() <= 250)) &&
+        (!('regiaoId' in data) || (data.regiaoId is string && data.regiaoId.size() <= 128)) &&
+        (!('regiaoNome' in data) || (data.regiaoNome is string && data.regiaoNome.size() <= 100)) &&
+        (!('taxaEntrega' in data) || (data.taxaEntrega is number && data.taxaEntrega >= 0)) &&
+        (!('trocoPara' in data) || (data.trocoPara is number && data.trocoPara >= 0)) &&
+        (!('resumoItens' in data) || (data.resumoItens is string && data.resumoItens.size() <= 800)) &&
+        (!('qtdMarmitas' in data) || (data.qtdMarmitas is number && data.qtdMarmitas >= 0)) &&
+        (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 300)) &&
+        (!('entregadorId' in data) || (data.entregadorId is string && data.entregadorId.size() <= 128)) &&
+        (!('entregadorNome' in data) || (data.entregadorNome is string && data.entregadorNome.size() <= 120)) &&
+        (!('pago' in data) || (data.pago is bool)) &&
+        (!('criadoPor' in data) || (data.criadoPor is string && data.criadoPor.size() <= 128)) &&
+        (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
+    }
+
+    function isValidItemPedido(data) {
+      return data.keys().hasAll(['pedidoId', 'numeroPedido', 'tipo', 'nome', 'quantidade', 'valorUnitario', 'total', 'criadoEm']) &&
+        data.keys().hasOnly(['pedidoId', 'numeroPedido', 'tipo', 'nome', 'tamanhoMarmita', 'carnes', 'acompanhamentos', 'adicionais', 'bebidas', 'quantidade', 'valorUnitario', 'total', 'observacao', 'criadoEm']) &&
+        data.pedidoId is string && data.pedidoId.size() >= 1 && data.pedidoId.size() <= 128 &&
+        data.numeroPedido is number && data.numeroPedido >= 1 &&
+        data.tipo is string && data.tipo in ['marmita', 'produto', 'buffet'] &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 160 &&
+        data.quantidade is number && data.quantidade >= 1 &&
+        data.valorUnitario is number && data.valorUnitario >= 0 &&
+        data.total is number && data.total >= 0 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('tamanhoMarmita' in data) || (data.tamanhoMarmita is string && data.tamanhoMarmita.size() <= 40)) &&
+        (!('carnes' in data) || (data.carnes is string && data.carnes.size() <= 250)) &&
+        (!('acompanhamentos' in data) || (data.acompanhamentos is string && data.acompanhamentos.size() <= 350)) &&
+        (!('adicionais' in data) || (data.adicionais is string && data.adicionais.size() <= 250)) &&
+        (!('bebidas' in data) || (data.bebidas is string && data.bebidas.size() <= 200)) &&
+        (!('observacao' in data) || (data.observacao is string && data.observacao.size() <= 240));
+    }
+
+    function isValidPagamento(data) {
+      return data.keys().hasAll(['referenciaId', 'tipoReferencia', 'formaPagamento', 'valor', 'criadoEm']) &&
+        data.keys().hasOnly(['referenciaId', 'tipoReferencia', 'caixaId', 'formaPagamento', 'valor', 'troco', 'registradoPor', 'criadoEm']) &&
+        data.referenciaId is string && data.referenciaId.size() >= 1 && data.referenciaId.size() <= 128 &&
+        data.tipoReferencia is string && data.tipoReferencia in ['pedido', 'comanda', 'avulso'] &&
+        data.formaPagamento is string && data.formaPagamento in ['dinheiro', 'pix', 'cartao_debito', 'cartao_credito'] &&
+        data.valor is number && data.valor >= 0 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('caixaId' in data) || (data.caixaId is string && data.caixaId.size() <= 128)) &&
+        (!('troco' in data) || (data.troco is number && data.troco >= 0)) &&
+        (!('registradoPor' in data) || (data.registradoPor is string && data.registradoPor.size() <= 120));
+    }
+
+    function isValidCaixa(data) {
+      return data.keys().hasAll(['status', 'saldoInicial', 'totalDinheiro', 'totalPix', 'totalCartaoDebito', 'totalCartaoCredito', 'abertoPor', 'abertoEm']) &&
+        data.keys().hasOnly(['status', 'saldoInicial', 'totalDinheiro', 'totalPix', 'totalCartaoDebito', 'totalCartaoCredito', 'totalEntradasExtras', 'totalSaidasSangrias', 'valorInformadoFechamento', 'diferencaFechamento', 'abertoPor', 'fechadoPor', 'abertoEm', 'fechadoEm', 'observacoes']) &&
+        data.status is string && data.status in ['aberto', 'fechado'] &&
+        data.saldoInicial is number && data.saldoInicial >= 0 &&
+        data.totalDinheiro is number && data.totalDinheiro >= 0 &&
+        data.totalPix is number && data.totalPix >= 0 &&
+        data.totalCartaoDebito is number && data.totalCartaoDebito >= 0 &&
+        data.totalCartaoCredito is number && data.totalCartaoCredito >= 0 &&
+        data.abertoPor is string && data.abertoPor.size() >= 1 && data.abertoPor.size() <= 120 &&
+        data.abertoEm is string && data.abertoEm.size() <= 40 &&
+        (!('totalEntradasExtras' in data) || (data.totalEntradasExtras is number && data.totalEntradasExtras >= 0)) &&
+        (!('totalSaidasSangrias' in data) || (data.totalSaidasSangrias is number && data.totalSaidasSangrias >= 0)) &&
+        (!('valorInformadoFechamento' in data) || (data.valorInformadoFechamento is number && data.valorInformadoFechamento >= 0)) &&
+        (!('diferencaFechamento' in data) || (data.diferencaFechamento is number)) &&
+        (!('fechadoPor' in data) || (data.fechadoPor is string && data.fechadoPor.size() <= 120)) &&
+        (!('fechadoEm' in data) || (data.fechadoEm is string && data.fechadoEm.size() <= 40)) &&
+        (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 300));
+    }
+
+    function isValidMovimentacaoCaixa(data) {
+      return data.keys().hasAll(['caixaId', 'tipo', 'formaPagamento', 'valor', 'descricao', 'criadoEm']) &&
+        data.keys().hasOnly(['caixaId', 'tipo', 'formaPagamento', 'valor', 'descricao', 'usuarioNome', 'criadoEm']) &&
+        data.caixaId is string && data.caixaId.size() >= 1 && data.caixaId.size() <= 128 &&
+        data.tipo is string && data.tipo in ['abertura', 'venda', 'entrada', 'retirada', 'sangria', 'fechamento'] &&
+        data.formaPagamento is string && data.formaPagamento in ['dinheiro', 'pix', 'cartao_debito', 'cartao_credito'] &&
+        data.valor is number && data.valor >= 0 &&
+        data.descricao is string && data.descricao.size() >= 1 && data.descricao.size() <= 240 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('usuarioNome' in data) || (data.usuarioNome is string && data.usuarioNome.size() <= 120));
+    }
+
+    function isValidEntregador(data) {
+      return data.keys().hasAll(['nome', 'telefone', 'status', 'criadoEm']) &&
+        data.keys().hasOnly(['nome', 'telefone', 'status', 'veiculo', 'entregasRealizadas', 'criadoEm']) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 120 &&
+        data.telefone is string && data.telefone.size() >= 3 && data.telefone.size() <= 30 &&
+        data.status is string && data.status in ['disponivel', 'em_entrega', 'indisponivel'] &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('veiculo' in data) || (data.veiculo is string && data.veiculo.size() <= 80)) &&
+        (!('entregasRealizadas' in data) || (data.entregasRealizadas is number && data.entregasRealizadas >= 0));
+    }
+
+    function isValidEntrega(data) {
+      return data.keys().hasAll(['pedidoId', 'numeroPedido', 'entregadorId', 'entregadorNome', 'clienteNome', 'endereco', 'status', 'atribuidoEm']) &&
+        data.keys().hasOnly(['pedidoId', 'numeroPedido', 'entregadorId', 'entregadorNome', 'clienteNome', 'clienteTelefone', 'endereco', 'regiaoNome', 'taxaEntrega', 'valorTotalPedido', 'formaPagamento', 'status', 'atribuidoEm', 'entregueEm']) &&
+        data.pedidoId is string && data.pedidoId.size() >= 1 && data.pedidoId.size() <= 128 &&
+        data.numeroPedido is number && data.numeroPedido >= 1 &&
+        data.entregadorId is string && data.entregadorId.size() >= 1 && data.entregadorId.size() <= 128 &&
+        data.entregadorNome is string && data.entregadorNome.size() >= 1 && data.entregadorNome.size() <= 120 &&
+        data.clienteNome is string && data.clienteNome.size() >= 1 && data.clienteNome.size() <= 120 &&
+        data.endereco is string && data.endereco.size() >= 1 && data.endereco.size() <= 250 &&
+        data.status is string && data.status in ['atribuida', 'saiu_para_entrega', 'entregue', 'cancelada'] &&
+        data.atribuidoEm is string && data.atribuidoEm.size() <= 40 &&
+        (!('clienteTelefone' in data) || (data.clienteTelefone is string && data.clienteTelefone.size() <= 30)) &&
+        (!('regiaoNome' in data) || (data.regiaoNome is string && data.regiaoNome.size() <= 100)) &&
+        (!('taxaEntrega' in data) || (data.taxaEntrega is number && data.taxaEntrega >= 0)) &&
+        (!('valorTotalPedido' in data) || (data.valorTotalPedido is number && data.valorTotalPedido >= 0)) &&
+        (!('formaPagamento' in data) || (data.formaPagamento is string && data.formaPagamento.size() <= 40)) &&
+        (!('entregueEm' in data) || (data.entregueEm is string && data.entregueEm.size() <= 40));
+    }
+
+    function isValidRegiaoEntrega(data) {
+      return data.keys().hasAll(['nome', 'taxa', 'ativo', 'criadoEm']) &&
+        data.keys().hasOnly(['nome', 'taxa', 'tempoEstimadoMin', 'ativo', 'criadoEm']) &&
+        data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 100 &&
+        data.taxa is number && data.taxa >= 0 &&
+        data.ativo is bool &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('tempoEstimadoMin' in data) || (data.tempoEstimadoMin is number && data.tempoEstimadoMin >= 1));
+    }
+
+    function isValidPedidoCozinha(data) {
+      return data.keys().hasAll(['referenciaId', 'numero', 'origem', 'identificacao', 'itensTexto', 'status', 'criadoEm']) &&
+        data.keys().hasOnly(['referenciaId', 'numero', 'origem', 'identificacao', 'itensTexto', 'observacoes', 'status', 'criadoEm', 'atualizadoEm']) &&
+        data.referenciaId is string && data.referenciaId.size() >= 1 && data.referenciaId.size() <= 128 &&
+        data.numero is number && data.numero >= 1 &&
+        data.origem is string && data.origem in ['delivery', 'marmita', 'mesa', 'balcao'] &&
+        data.identificacao is string && data.identificacao.size() >= 1 && data.identificacao.size() <= 120 &&
+        data.itensTexto is string && data.itensTexto.size() >= 1 && data.itensTexto.size() <= 800 &&
+        data.status is string && data.status in ['novo', 'em_preparo', 'pronto', 'finalizado'] &&
+        data.criadoEm is string && data.criadoEm.size() <= 40 &&
+        (!('observacoes' in data) || (data.observacoes is string && data.observacoes.size() <= 300)) &&
+        (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
+    }
+
+    function isValidConfiguracao(data) {
+      return data.keys().hasAll(['nomeRestaurante', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'atualizadoEm']) &&
+        data.keys().hasOnly(['nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cnpj', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo', 'logoUrl', 'atualizadoEm']) &&
+        data.nomeRestaurante is string && data.nomeRestaurante.size() >= 1 && data.nomeRestaurante.size() <= 120 &&
+        data.precoMarmitaP is number && data.precoMarmitaP >= 0 &&
+        data.precoMarmitaM is number && data.precoMarmitaM >= 0 &&
+        data.precoMarmitaG is number && data.precoMarmitaG >= 0 &&
+        data.precoBuffetAdulto is number && data.precoBuffetAdulto >= 0 &&
+        data.precoBuffetCrianca is number && data.precoBuffetCrianca >= 0 &&
+        data.atualizadoEm is string && data.atualizadoEm.size() <= 40 &&
+        (!('telefoneRestaurante' in data) || (data.telefoneRestaurante is string && data.telefoneRestaurante.size() <= 30)) &&
+        (!('enderecoRestaurante' in data) || (data.enderecoRestaurante is string && data.enderecoRestaurante.size() <= 240)) &&
+        (!('cnpj' in data) || (data.cnpj is string && data.cnpj.size() <= 30)) &&
+        (!('precoBuffetKilo' in data) || (data.precoBuffetKilo is number && data.precoBuffetKilo >= 0)) &&
+        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 500));
+    }
+
+    function isValidLogAuditoria(data) {
+      return data.keys().hasAll(['acao', 'detalhes', 'usuarioId', 'usuarioNome', 'criadoEm']) &&
+        data.keys().hasOnly(['acao', 'detalhes', 'usuarioId', 'usuarioNome', 'criadoEm']) &&
+        data.acao is string && data.acao.size() >= 1 && data.acao.size() <= 100 &&
+        data.detalhes is string && data.detalhes.size() >= 1 && data.detalhes.size() <= 400 &&
+        data.usuarioId is string && data.usuarioId.size() >= 1 && data.usuarioId.size() <= 128 &&
+        data.usuarioNome is string && data.usuarioNome.size() >= 1 && data.usuarioNome.size() <= 120 &&
+        data.criadoEm is string && data.criadoEm.size() <= 40;
+    }
+
+    // Connection Test Path
+    match /test/{testId} {
+      allow get: if isValidId(testId);
+    }
+
+    // 1. Usuarios Collection (PII Protected)
+    match /usuarios/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isActiveStaff());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId) && isValidUsuario(incoming()) && (
+        (request.auth.uid == userId && incoming().uid == request.auth.uid) || isActiveStaff()
+      );
+      allow update: if isSignedIn() && isValidId(userId) && isValidUsuario(incoming()) && (
+        isAdmin() ||
+        (request.auth.uid == userId && incoming().uid == existing().uid && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'funcao', 'permissoes', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(userId) && isAdmin();
+    }
+
+    // 2. Clientes Collection
+    match /clientes/{clienteId} {
+      allow get: if isSignedIn() && isValidId(clienteId) && isActiveStaff();
+      allow list: if isSignedIn();
+      allow create: if isValidId(clienteId) && isValidCliente(incoming());
+      allow update: if isSignedIn() && isValidId(clienteId) && isValidCliente(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'telefone', 'endereco', 'regiaoId', 'regiaoNome', 'totalPedidos']))
+      );
+      allow delete: if isSignedIn() && isValidId(clienteId) && isAdmin();
+    }
+
+    // 3. Categorias Collection
+    match /categorias/{categoriaId} {
+      allow get: if isValidId(categoriaId);
+      allow list: if true;
+      allow create: if isSignedIn() && isValidId(categoriaId) && isValidCategoria(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(categoriaId) && isValidCategoria(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'ordem', 'ativo']))
+      );
+      allow delete: if isSignedIn() && isValidId(categoriaId) && isAdmin();
+    }
+
+    // 4. Produtos Collection
+    match /produtos/{produtoId} {
+      allow get: if isValidId(produtoId);
+      allow list: if true;
+      allow create: if isSignedIn() && isValidId(produtoId) && isValidProduto(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(produtoId) && isValidProduto(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['disponivel', 'ativo', 'preco', 'nome', 'descricao', 'categoria', 'imagemUrl', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'ehDadoDemonstracao', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(produtoId) && isAdmin();
+    }
+
+    // 5. Mesas Collection
+    match /mesas/{mesaId} {
+      allow get: if isSignedIn() && isValidId(mesaId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(mesaId) && isValidMesa(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(mesaId) && isValidMesa(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'pessoas', 'comandaId', 'clienteReserva', 'capacidade', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(mesaId) && isAdmin();
+    }
+
+    // 6. Comandas Collection
+    match /comandas/{comandaId} {
+      allow get: if isSignedIn() && isValidId(comandaId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(comandaId) && isValidComanda(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(comandaId) && isValidComanda(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['mesaId', 'mesaNumero', 'status', 'pessoas', 'tipoBuffet', 'valorPorPessoaBuffet', 'valorBuffetTotal', 'subtotalItens', 'total', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(comandaId) && isAdmin();
+    }
+
+    // 7. ItensComanda Collection
+    match /itensComanda/{itemId} {
+      allow get: if isSignedIn() && isValidId(itemId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(itemId) && isValidItemComanda(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(itemId) && isValidItemComanda(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['comandaId', 'mesaNumero', 'quantidade', 'total', 'observacao']))
+      );
+      allow delete: if isSignedIn() && isValidId(itemId) && isActiveStaff();
+    }
+
+    // 8. Pedidos Collection
+    match /pedidos/{pedidoId} {
+      allow get: if isValidId(pedidoId);
+      allow list: if isSignedIn();
+      allow create: if isValidId(pedidoId) && isValidPedido(incoming());
+      allow update: if isSignedIn() && isValidId(pedidoId) && isValidPedido(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'entregadorId', 'entregadorNome', 'pago', 'formaPagamento', 'observacoes', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(pedidoId) && isAdmin();
+    }
+
+    // 9. ItensPedido Collection
+    match /itensPedido/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if isSignedIn();
+      allow create: if isValidId(itemId) && isValidItemPedido(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidItemPedido(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['quantidade', 'total', 'observacao']))
+      );
+      allow delete: if isSignedIn() && isValidId(itemId) && isAdmin();
+    }
+
+    // 10. Pagamentos Collection
+    match /pagamentos/{pagamentoId} {
+      allow get: if isSignedIn() && isValidId(pagamentoId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(pagamentoId) && isValidPagamento(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(pagamentoId) && isValidPagamento(incoming()) && isAdmin();
+      allow delete: if isSignedIn() && isValidId(pagamentoId) && isAdmin();
+    }
+
+    // 11. Caixas Collection
+    match /caixas/{caixaId} {
+      allow get: if isSignedIn() && isValidId(caixaId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(caixaId) && isValidCaixa(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(caixaId) && isValidCaixa(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'totalDinheiro', 'totalPix', 'totalCartaoDebito', 'totalCartaoCredito', 'totalEntradasExtras', 'totalSaidasSangrias', 'valorInformadoFechamento', 'diferencaFechamento', 'fechadoPor', 'fechadoEm', 'observacoes']))
+      );
+      allow delete: if isSignedIn() && isValidId(caixaId) && isAdmin();
+    }
+
+    // 12. MovimentacoesCaixa Collection
+    match /movimentacoesCaixa/{movId} {
+      allow get: if isSignedIn() && isValidId(movId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(movId) && isValidMovimentacaoCaixa(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(movId) && isValidMovimentacaoCaixa(incoming()) && isAdmin();
+      allow delete: if isSignedIn() && isValidId(movId) && isAdmin();
+    }
+
+    // 13. Entregadores Collection
+    match /entregadores/{entregadorId} {
+      allow get: if isSignedIn() && isValidId(entregadorId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(entregadorId) && isValidEntregador(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(entregadorId) && isValidEntregador(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'telefone', 'status', 'veiculo', 'entregasRealizadas']))
+      );
+      allow delete: if isSignedIn() && isValidId(entregadorId) && isAdmin();
+    }
+
+    // 14. Entregas Collection
+    match /entregas/{entregaId} {
+      allow get: if isSignedIn() && isValidId(entregaId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(entregaId) && isValidEntrega(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(entregaId) && isValidEntrega(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'entregueEm', 'entregadorId', 'entregadorNome']))
+      );
+      allow delete: if isSignedIn() && isValidId(entregaId) && isAdmin();
+    }
+
+    // 15. RegioesEntrega Collection
+    match /regioesEntrega/{regiaoId} {
+      allow get: if isValidId(regiaoId);
+      allow list: if true;
+      allow create: if isSignedIn() && isValidId(regiaoId) && isValidRegiaoEntrega(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(regiaoId) && isValidRegiaoEntrega(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nome', 'taxa', 'tempoEstimadoMin', 'ativo']))
+      );
+      allow delete: if isSignedIn() && isValidId(regiaoId) && isAdmin();
+    }
+
+    // 16. PedidosCozinha Collection (KDS)
+    match /pedidosCozinha/{cozinhaId} {
+      allow get: if isSignedIn() && isValidId(cozinhaId);
+      allow list: if isSignedIn();
+      allow create: if isValidId(cozinhaId) && isValidPedidoCozinha(incoming());
+      allow update: if isSignedIn() && isValidId(cozinhaId) && isValidPedidoCozinha(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'itensTexto', 'observacoes', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(cozinhaId) && isActiveStaff();
+    }
+
+    // 17. Configuracoes Collection
+    match /configuracoes/{configId} {
+      allow get: if isValidId(configId);
+      allow list: if true;
+      allow create: if isSignedIn() && isValidId(configId) && isValidConfiguracao(incoming()) && isActiveStaff();
+      allow update: if isSignedIn() && isValidId(configId) && isValidConfiguracao(incoming()) && (
+        isAdmin() ||
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cnpj', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo', 'logoUrl', 'atualizadoEm']))
+      );
+      allow delete: if isSignedIn() && isValidId(configId) && isAdmin();
+    }
+
+    // 18. LogsAuditoria Collection
+    match /logsAuditoria/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && isAdmin();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(logId) && isValidLogAuditoria(incoming());
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
