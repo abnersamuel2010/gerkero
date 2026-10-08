@@ -1,21 +1,318 @@
 @import "tailwindcss";
 
+:root {
+  /* Design Tokens & Theme Palettes */
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Syne', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Refined Gourmand Shadows */
+  --shadow-subtle: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 10px 25px -4px rgba(15, 23, 42, 0.09), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-elevated: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 6px 12px -4px rgba(15, 23, 42, 0.06);
+  --shadow-amber-glow: 0 4px 20px -2px rgba(217, 119, 6, 0.32);
+  --shadow-dark-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+
+  /* Fluid Motion Springs */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur-normal: 240ms;
+  --dur-slow: 380ms;
+}
+
 @layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  h1, h2, .font-display {
-    font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+  body {
+    font-family: var(--font-body);
+    background-color: #f8fafc;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
     text-wrap: balance;
+    letter-spacing: -0.025em;
   }
 
   .font-mono, .tabular-nums {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background-color: #ea580c;
+    color: #ffffff;
   }
 }
 
+/* 1. Modern Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+  transition: background-color var(--dur-normal) ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+/* 2. Buttons & Interactive Controls */
+button,
+a,
+input[type="button"],
+input[type="submit"] {
+  transition:
+    background-color var(--dur-normal) var(--ease-spring),
+    border-color var(--dur-normal) var(--ease-spring),
+    color var(--dur-normal) var(--ease-spring),
+    box-shadow var(--dur-normal) var(--ease-spring),
+    transform var(--dur-fast) var(--ease-spring),
+    opacity var(--dur-normal) ease;
+}
+
+button:active,
+a:active {
+  transform: scale(0.985);
+}
+
+button.bg-slate-900,
+button.bg-slate-950,
+.bg-slate-900 button:not(.bg-white):not(.bg-amber-500):not(.bg-amber-600) {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.12), var(--shadow-dark-inset);
+}
+
+button.bg-slate-900:hover,
+button.bg-slate-950:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.35), var(--shadow-dark-inset);
+}
+
+button.bg-amber-500:hover,
+button.bg-amber-600:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-amber-glow);
+}
+
+button.bg-emerald-600:hover,
+button.bg-emerald-500:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px -2px rgba(16, 185, 129, 0.35);
+}
+
+button.bg-rose-600:hover,
+button.bg-red-600:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px -2px rgba(225, 29, 72, 0.32);
+}
+
+button.bg-white.border:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+}
+
+/* 3. Cards & Surfaces */
+.bg-white.border,
+.bg-white.border-slate-200,
+.bg-white.border-slate-100 {
+  box-shadow: var(--shadow-card);
+  border-color: rgba(226, 232, 240, 0.85);
+  transition:
+    box-shadow var(--dur-normal) var(--ease-spring),
+    border-color var(--dur-normal) var(--ease-spring),
+    transform var(--dur-normal) var(--ease-spring);
+}
+
+.cursor-pointer.bg-white:hover,
+.bg-white.hover\:border-amber-500:hover,
+.bg-white.hover\:border-slate-300:hover,
+.bg-white.hover\:shadow-md:hover,
+.bg-white.hover\:shadow-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(203, 213, 225, 0.95);
+}
+
+.bg-slate-900.border,
+.bg-slate-950.border {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  border-color: rgba(51, 65, 85, 0.65);
+}
+
+/* 4. Form Elements */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  transition:
+    border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.16) !important;
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+  transition: transform var(--dur-fast) ease, border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+input[type="checkbox"]:hover,
+input[type="radio"]:hover {
+  transform: scale(1.05);
+}
+
+/* 5. Tables & Data Display */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+thead th {
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  background-color: #f8fafc;
+  color: #475569;
+}
+
+tbody tr {
+  transition: background-color var(--dur-fast) ease;
+}
+
+tbody tr:hover {
+  background-color: rgba(241, 245, 249, 0.6);
+}
+
+/* 6. TopBar & Sticky Navigation */
+header.sticky {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+}
+
+aside nav button:hover,
+aside nav a:hover {
+  transform: translateX(2px);
+}
+
+/* 7. Modals & Dialogs */
+.fixed.inset-0.bg-black\/70,
+.fixed.inset-0.bg-black\/60,
+.fixed.inset-0.bg-black\/50,
+.fixed.inset-0.bg-black\/80 {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(15, 23, 42, 0.72) !important;
+}
+
+.fixed.inset-0 > div[class*="rounded-"] {
+  animation: modalGentleEntrance var(--dur-normal) var(--ease-spring) forwards;
+}
+
+@keyframes modalGentleEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 8. Badges, Status Pills & Micro-Animations */
+span[class*="rounded-full"] {
+  letter-spacing: 0.02em;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main,
+.flex-1.p-4 {
+  animation: viewFadeIn var(--dur-slow) var(--ease-spring) forwards;
+}
+
+/* 9. Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transform: none !important;
+  }
+}
+
+/* 10. Thermal Printing Isolation (POS Receipts) */
 @media print {
   body * {
     visibility: hidden;
