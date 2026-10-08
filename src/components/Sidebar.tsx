@@ -16,6 +16,12 @@ import {
   LogOut,
   Menu,
   X,
+  Flame,
+  Beef,
+  Crown,
+  Zap,
+  Soup,
+  Sparkles,
 } from 'lucide-react';
 import { Usuario, UserRole } from '../types';
 import { formatRoleName } from '../utils/formatters';
@@ -46,6 +52,10 @@ interface SidebarProps {
   deliveryNovosCount: number;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  corPrimaria?: string;
+  iconeTema?: string;
+  nomeRestaurante?: string;
+  logoUrl?: string;
 }
 
 interface MenuItem {
@@ -67,7 +77,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   deliveryNovosCount,
   mobileOpen,
   setMobileOpen,
+  corPrimaria = '#e11d48',
+  iconeTema = 'flame',
+  nomeRestaurante = 'RESTAURANTE KERO',
+  logoUrl,
 }) => {
+  const renderIcone = () => {
+    const props = { className: 'w-4 h-4 text-white' };
+    switch (iconeTema) {
+      case 'beef':
+        return <Beef {...props} />;
+      case 'utensils':
+        return <UtensilsCrossed {...props} />;
+      case 'crown':
+        return <Crown {...props} />;
+      case 'zap':
+        return <Zap {...props} />;
+      case 'soup':
+        return <Soup {...props} />;
+      case 'chef-hat':
+        return <ChefHat {...props} />;
+      case 'sparkles':
+        return <Sparkles {...props} />;
+      default:
+        return <Flame {...props} />;
+    }
+  };
   const menuItems: MenuItem[] = [
     {
       id: 'dashboard',
@@ -157,6 +192,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-slate-900 text-slate-200 w-64 shrink-0 border-r border-slate-800 select-none">
+      {/* Brand Header no topo do Sidebar */}
+      <div className="p-4 border-b border-slate-800/80 bg-slate-950/40 flex items-center gap-3">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs overflow-hidden"
+          style={{ backgroundColor: corPrimaria }}
+        >
+          {logoUrl ? (
+            <img src={logoUrl} alt={nomeRestaurante} className="w-full h-full object-cover" />
+          ) : (
+            renderIcone()
+          )}
+        </div>
+        <div className="truncate">
+          <div className="text-xs font-bold text-white uppercase tracking-wider truncate font-display">
+            {nomeRestaurante}
+          </div>
+          <div className="text-[10px] text-slate-400">Painel Operacional</div>
+        </div>
+      </div>
+
       {/* Perfil do Operador e Simulador de Perfil RBAC */}
       <div className="p-4 border-b border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
@@ -206,9 +261,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onSelectTab(item.id);
                 setMobileOpen(false);
               }}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              style={active ? { backgroundColor: corPrimaria } : undefined}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                 active
-                  ? 'bg-amber-600 text-white'
+                  ? 'text-white shadow-xs font-semibold'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >

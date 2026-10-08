@@ -1,4 +1,4 @@
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase/config';
 import {
   Pedido,
@@ -232,5 +232,75 @@ export async function atualizarStatusPedido(
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Exclui permanentemente um pedido do Cloud Firestore,
+ * removendo também seus itens da cozinha (KDS), itensPedido e entregas vinculadas.
+ */
+export async function excluirPedidoDefinitivo(
+  pedidoId: string,
+  numeroPedido?: number
+): Promise<void> {
+  const path = `pedidos/${pedidoId}`;
+  try {
+    // 1. Excluir o documento principal do pedido
+    await deleteDoc(doc(db, 'pedidos', pedidoId));
+
+    // 2. Excluir itens associados em itensPedido
+    try {
+      const snapItens = await getDocs(collection(db, 'itensPedido'));
+      for (const d of snapItens.docs) {
+        const itemData = d.data();
+        if (
+          itemData.pedidoId === pedidoId ||
+          (numeroPedido && itemData.numeroPedido === numeroPedido)
+        ) {
+          await deleteDoc(doc(db, 'itensPedido', d.id));
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao limpar itensPedido vinculados:', err);
+    }
+
+    // 3. Excluir ordem correspondente na Cozinha (KDS)
+    try {
+      const snapKds = await getDocs(collection(db, 'pedidosCozinha'));
+      for (const d of snapKds.docs) {
+        const kdsData = d.data();
+        if (
+          kdsData.referenciaId === pedidoId ||
+          (numeroPedido && kdsData.numero === numeroPedido)
+        ) {
+          await deleteDoc(doc(db, 'pedidosCozinha', d.id));
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao limpar pedidosCozinha vinculados:', err);
+    }
+
+    // 4. Excluir entregas vinculadas
+    try {
+      const snapEnt = await getDocs(collection(db, 'entregas'));
+      for (const d of snapEnt.docs) {
+        const entData = d.data();
+        if (
+          entData.pedidoId === pedidoId ||
+          (numeroPedido && entData.numeroPedido === numeroPedido)
+        ) {
+          await deleteDoc(doc(db, 'entregas', d.id));
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao limpar entregas vinculadas:', err);
+    }
+
+    await registrarLogAuditoria(
+      'Exclusão de Pedido',
+      `Pedido #${numeroPedido || pedidoId} excluído permanentemente do sistema.`
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }

@@ -62,6 +62,12 @@ export const CONFIG_PADRAO: ConfiguracaoRestaurante = {
   precoBuffetAdulto: 30,
   precoBuffetCrianca: 20,
   precoBuffetKilo: 69.9,
+  corPrimaria: '#e11d48',
+  corTemaNome: 'vermelho_kero',
+  corFundo: '#090d16',
+  corFundoNome: 'escuro_slate',
+  iconeTema: 'flame',
+  bannerUrl: IMAGENS_PADRAO.porcaoChurrasco,
   atualizadoEm: new Date().toISOString(),
 };
 

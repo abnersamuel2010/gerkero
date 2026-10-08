@@ -28,6 +28,8 @@ import {
   Package,
   Calendar,
   AlertTriangle,
+  Instagram,
+  Facebook,
 } from 'lucide-react';
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '../firebase/config';
@@ -234,6 +236,12 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
       const matchCat =
         categoriaAtiva === 'todos' ||
         (categoriaAtiva === 'marmitas' && p.categoria === 'Marmitas') ||
+        (categoriaAtiva === 'produtos' &&
+          (p.categoria === 'Bebidas' ||
+            p.categoria === 'Doces e Sobremesas' ||
+            p.categoria === 'Saladas Avulsas' ||
+            p.categoria === 'Porções' ||
+            p.categoria === 'Outros')) ||
         (categoriaAtiva === 'carnes' && (p.categoria === 'Carnes' || p.categoria === 'Carnes Especiais')) ||
         (categoriaAtiva === 'bebidas' && p.categoria === 'Bebidas') ||
         (categoriaAtiva === 'porcoes' && p.categoria === 'Porções') ||
@@ -269,7 +277,6 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
   }, [temCarneEspecial, carnesSelecionadasObjs.length]);
 
   const adicionalDuasCarnesNormais = temDuasCarnesNormais ? 2.0 : 0;
-  const faltaSegundaCarne = temCarneEspecial && carnesSelecionadasObjs.length < 2;
 
   const valorExtrasCarnes = useMemo(() => {
     return (
@@ -425,19 +432,12 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
       return;
     }
 
-    if (faltaSegundaCarne) {
-      alert(
-        'Regra de Carne Mista: Carnes especiais (Feijoada e Costela) têm adicional de R$ 2,00 e exigem obrigatoriamente a combinação com uma segunda carne normal.'
-      );
-      return;
-    }
-
     const carnesNomes = carnesSelecionadasObjs.map((c) => c.nome).join(' + ');
 
     const detalheCarnes = temDuasCarnesNormais
-      ? ' (+R$ 2,00 2 carnes)'
+      ? ' (+R$ 2,00 2 carnes normais)'
       : temCarneEspecial
-      ? ' (Mista Especial)'
+      ? ' (Carne Especial)'
       : '';
 
     setSacola((prev) => [
@@ -573,10 +573,20 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
     window.open(url, '_blank');
   };
 
+  const corFundoEfetiva = config.corFundo || '#020617';
+  const corBotoesEfetiva = config.corBotoes || '#f59e0b';
+  const corPrimariaEfetiva = config.corPrimaria || '#e11d48';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div
+      className="min-h-screen text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950"
+      style={{ backgroundColor: corFundoEfetiva }}
+    >
       {/* Barra de Notificação Superior */}
-      <div className="bg-amber-600 px-4 py-2 text-center text-xs font-semibold text-slate-950 flex items-center justify-center gap-2">
+      <div
+        className="px-4 py-2 text-center text-xs font-semibold text-slate-950 flex items-center justify-center gap-2 shadow-xs"
+        style={{ backgroundColor: corBotoesEfetiva }}
+      >
         <Sparkles className="w-3.5 h-3.5" />
         <span>Cardápio Oficial Delivery — Faça seu pedido online com entrega rápida e quentinha!</span>
       </div>
@@ -588,26 +598,39 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
             {/* Logo e Nome */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-lg shadow-amber-500/20 shrink-0">
-                  <UtensilsCrossed className="w-6 h-6" />
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-lg overflow-hidden shrink-0 border border-white/20"
+                  style={{ backgroundColor: corPrimariaEfetiva }}
+                >
+                  {config.logoUrl ? (
+                    <img
+                      src={config.logoUrl}
+                      alt={config.nomeRestaurante || 'Logo'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UtensilsCrossed className="w-6 h-6" />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="text-lg sm:text-xl font-bold font-display text-white tracking-tight">
-                      RESTAURANTE KERO
+                      {config.nomeRestaurante || 'RESTAURANTE KERO'}
                     </h1>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       Aberto
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-3">
+                  <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
                     <span className="flex items-center gap-1 text-amber-400 font-medium">
                       <Clock className="w-3.5 h-3.5" /> 30-45 min
                     </span>
                     <span>·</span>
                     <span className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" /> Entrega em domicílio
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {config.enderecoRestaurante || 'Entrega em domicílio'}
+                      {config.cep ? ` (${config.cep})` : ''}
                     </span>
                   </p>
                 </div>
@@ -621,7 +644,8 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                     setEtapaCheckout('sacola');
                     setCarrinhoAberto(true);
                   }}
-                  className="relative p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md flex items-center gap-1.5"
+                  className="relative p-2.5 rounded-xl text-slate-950 font-bold shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+                  style={{ backgroundColor: corBotoesEfetiva }}
                 >
                   <ShoppingBag className="w-5 h-5" />
                   {totalItens > 0 && (
@@ -680,7 +704,8 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                   setEtapaCheckout('sacola');
                   setCarrinhoAberto(true);
                 }}
-                className="relative px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all active:scale-95 shadow-lg shadow-amber-500/20 flex items-center gap-2.5"
+                className="relative px-4 py-2.5 rounded-xl text-slate-950 font-extrabold transition-all active:scale-95 shadow-lg shadow-amber-500/20 flex items-center gap-2.5"
+                style={{ backgroundColor: corBotoesEfetiva }}
               >
                 <ShoppingBag className="w-5 h-5" />
                 <span className="text-xs font-extrabold">Sacola</span>
@@ -708,13 +733,14 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
           <div className="flex items-center gap-1.5 overflow-x-auto pt-3 pb-1 scrollbar-none border-t border-slate-800/80 mt-2.5">
             {[
               { id: 'destaques', label: '🏠 Destaques de Hoje' },
+              { id: 'produtos', label: '🛍️ Produtos (Bebidas, Doces & Saladas)' },
               { id: 'todos', label: '🔥 Cardápio Completo' },
               { id: 'marmitas', label: '🍱 Marmitas na Brasa' },
               { id: 'carnes', label: '🥩 Carnes de Hoje' },
               { id: 'saladas', label: '🥗 Saladas Frescas' },
               { id: 'bebidas', label: '🥤 Bebidas & Água' },
-              { id: 'porcoes', label: '🍲 Porções' },
               { id: 'doces', label: '🍬 Doces & Sobremesas' },
+              { id: 'porcoes', label: '🍲 Porções' },
               { id: 'acompanhamentos', label: '🍚 Guarnições' },
             ].map((cat) => (
               <button
@@ -788,15 +814,31 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
         {categoriaAtiva === 'destaques' && !busca.trim() && (
           <div className="space-y-10">
             {/* Hero Cardápio / Montar Marmita Banner Especial */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-amber-700 to-amber-900 p-6 sm:p-10 text-white shadow-2xl">
+            <div className="relative overflow-hidden rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-white/10">
+              {/* Imagem de Fundo do Banner Configurado */}
+              <div className="absolute inset-0 z-0">
+                <img
+                  src={config.bannerUrl || IMAGENS_PADRAO.porcaoChurrasco}
+                  alt={config.nomeRestaurante || 'Banner do Restaurante'}
+                  className="w-full h-full object-cover"
+                />
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/80 to-black/40"
+                  style={{ backdropFilter: 'blur(2px)' }}
+                />
+              </div>
+
               <div className="relative z-10 max-w-2xl space-y-4">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-black/35 backdrop-blur-xs text-xs font-bold text-amber-200 border border-white/10">
-                  <Flame className="w-4 h-4 text-amber-300" /> Especialidade RESTAURANTE KERO
+                <span
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-xs font-bold border border-white/10"
+                  style={{ color: corBotoesEfetiva }}
+                >
+                  <Flame className="w-4 h-4" /> Especialidade {config.nomeRestaurante || 'RESTAURANTE KERO'}
                 </span>
-                <h2 className="text-2xl sm:text-4xl font-extrabold font-display leading-tight">
+                <h2 className="text-2xl sm:text-4xl font-extrabold font-display leading-tight text-white drop-shadow-md">
                   Marmitas na Brasa & Carnes do Dia
                 </h2>
-                <p className="text-xs sm:text-sm text-amber-100/90 leading-relaxed max-w-xl">
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed max-w-xl drop-shadow-sm">
                   Escolha o tamanho (Pequena, Média ou Grande), cortes nobres assados na brasa hoje ({DIAS_DA_SEMANA.find((d) => d.key === diaHojeKey)?.nomeCompleto}),
                   arroz soltinho, feijão especial e acompanhamentos fresquinhos.
                 </p>
@@ -804,7 +846,8 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                   <button
                     type="button"
                     onClick={() => setModalMarmitaAberto(true)}
-                    className="px-6 py-3.5 rounded-xl bg-slate-950 hover:bg-black text-amber-400 font-bold text-xs sm:text-sm shadow-xl flex items-center gap-2 transition-all active:scale-95 border border-amber-500/40"
+                    className="px-6 py-3.5 rounded-xl text-slate-950 font-extrabold text-xs sm:text-sm shadow-xl flex items-center gap-2 transition-all active:scale-95 border border-white/20"
+                    style={{ backgroundColor: corBotoesEfetiva }}
                   >
                     <Plus className="w-4 h-4" />
                     Montar Minha Marmita (A partir de {formatCurrency(config.precoMarmitaP || 16)})
@@ -812,19 +855,11 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                   <button
                     type="button"
                     onClick={() => setCategoriaAtiva('todos')}
-                    className="px-4 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs transition-colors"
+                    className="px-4 py-3.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs transition-colors border border-white/10"
                   >
                     Ver Cardápio Completo
                   </button>
                 </div>
-              </div>
-
-              <div className="absolute right-0 bottom-0 top-0 w-2/5 opacity-25 pointer-events-none hidden lg:block">
-                <img
-                  src={IMAGENS_PADRAO.marmitaPicanha}
-                  alt="Marmita na Brasa"
-                  className="w-full h-full object-cover rounded-r-3xl"
-                />
               </div>
             </div>
 
@@ -1178,6 +1213,8 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                   <UtensilsCrossed className="w-5 h-5 text-amber-400" />
                   {busca.trim()
                     ? `Resultados para "${busca}"`
+                    : categoriaAtiva === 'produtos'
+                    ? 'Produtos (Bebidas, Sobremesas & Saladas Avulsas)'
                     : categoriaAtiva === 'todos'
                     ? 'Cardápio Completo'
                     : categoriaAtiva === 'marmitas'
@@ -1232,6 +1269,297 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                 >
                   Ver Destaques de Hoje
                 </button>
+              </div>
+            ) : categoriaAtiva === 'produtos' && !busca.trim() ? (
+              /* EXIBIÇÃO DE PRODUTOS EM TÓPICOS DIFERENTES (Bebidas, Doces & Sobremesas, Saladas Avulsas) */
+              <div className="space-y-10">
+                {/* Tópico 1: Bebidas Geladas & Água */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                        🥤
+                      </div>
+                      <div>
+                        <h4 className="text-base sm:text-lg font-bold text-white">
+                          Bebidas Geladas & Água Mineral
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Refrigerantes de lata e 2L, sucos naturais e água para acompanhar sua refeição
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-blue-300 border border-slate-700">
+                      {produtosFiltrados.filter((p) => p.categoria === 'Bebidas').length} itens
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {produtosFiltrados
+                      .filter((p) => p.categoria === 'Bebidas')
+                      .map((prod) => {
+                        const imgProd = getImagemProduto(prod);
+                        const esgotado = prod.estoque !== undefined && prod.estoque <= 0;
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`bg-slate-900 border rounded-2xl overflow-hidden flex flex-col justify-between group transition-all ${
+                              esgotado
+                                ? 'border-red-950/40 opacity-70'
+                                : 'border-slate-800/80 hover:border-amber-500/50 hover:shadow-xl hover:shadow-black/50'
+                            }`}
+                          >
+                            <div>
+                              <div className="w-full h-44 bg-slate-950 relative overflow-hidden">
+                                <img
+                                  src={imgProd}
+                                  alt={prod.nome}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[10px] font-semibold text-blue-300 border border-white/10">
+                                  Bebida Gelada
+                                </span>
+                              </div>
+                              <div className="p-4 space-y-2">
+                                <h4 className="text-base font-bold text-white group-hover:text-amber-400 transition-colors">
+                                  {prod.nome}
+                                </h4>
+                                {prod.descricao && (
+                                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                    {prod.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="p-4 pt-0 space-y-3">
+                              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                                <span className="text-xs text-slate-400">Preço:</span>
+                                <span className="text-base font-extrabold text-amber-400 font-mono">
+                                  {formatCurrency(prod.preco)}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={esgotado}
+                                onClick={() => handleAdicionarProduto(prod)}
+                                className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all ${
+                                  esgotado
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                                }`}
+                              >
+                                <Plus className="w-4 h-4" />
+                                {esgotado ? 'Esgotado' : 'Adicionar à Sacola'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Tópico 2: Doces & Sobremesas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">
+                        🍰
+                      </div>
+                      <div>
+                        <h4 className="text-base sm:text-lg font-bold text-white">
+                          Doces & Sobremesas Artesanais
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Pudins caseiros, doces em canudo, trufas e paçocas fresquinhas
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-pink-300 border border-slate-700">
+                      {
+                        produtosFiltrados.filter(
+                          (p) =>
+                            p.categoria === 'Doces e Sobremesas' ||
+                            p.nome.toLowerCase().includes('doce') ||
+                            p.nome.toLowerCase().includes('pudim') ||
+                            p.nome.toLowerCase().includes('trufa') ||
+                            p.nome.toLowerCase().includes('paçoca') ||
+                            p.nome.toLowerCase().includes('canudo')
+                        ).length
+                      }{' '}
+                      itens
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {produtosFiltrados
+                      .filter(
+                        (p) =>
+                          p.categoria === 'Doces e Sobremesas' ||
+                          p.nome.toLowerCase().includes('doce') ||
+                          p.nome.toLowerCase().includes('pudim') ||
+                          p.nome.toLowerCase().includes('trufa') ||
+                          p.nome.toLowerCase().includes('paçoca') ||
+                          p.nome.toLowerCase().includes('canudo')
+                      )
+                      .map((prod) => {
+                        const imgProd = getImagemProduto(prod);
+                        const esgotado = prod.estoque !== undefined && prod.estoque <= 0;
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`bg-slate-900 border rounded-2xl overflow-hidden flex flex-col justify-between group transition-all ${
+                              esgotado
+                                ? 'border-red-950/40 opacity-70'
+                                : 'border-slate-800/80 hover:border-pink-500/50 hover:shadow-xl hover:shadow-black/50'
+                            }`}
+                          >
+                            <div>
+                              <div className="w-full h-44 bg-slate-950 relative overflow-hidden">
+                                <img
+                                  src={imgProd}
+                                  alt={prod.nome}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[10px] font-semibold text-pink-300 border border-white/10">
+                                  Sobremesa
+                                </span>
+                              </div>
+                              <div className="p-4 space-y-2">
+                                <h4 className="text-base font-bold text-white group-hover:text-pink-400 transition-colors">
+                                  {prod.nome}
+                                </h4>
+                                {prod.descricao && (
+                                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                    {prod.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="p-4 pt-0 space-y-3">
+                              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                                <span className="text-xs text-slate-400">Preço:</span>
+                                <span className="text-base font-extrabold text-pink-400 font-mono">
+                                  {formatCurrency(prod.preco)}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={esgotado}
+                                onClick={() => handleAdicionarProduto(prod)}
+                                className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all ${
+                                  esgotado
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : 'bg-pink-600 hover:bg-pink-700 text-white'
+                                }`}
+                              >
+                                <Plus className="w-4 h-4" />
+                                {esgotado ? 'Esgotado' : 'Adicionar à Sacola'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Tópico 3: Saladas Avulsas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                        🥗
+                      </div>
+                      <div>
+                        <h4 className="text-base sm:text-lg font-bold text-white">
+                          Saladas Avulsas & Frescas
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Saladas coloridas, vinagrete tradicional e folhas frescas temperadas
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-emerald-300 border border-slate-700">
+                      {
+                        produtosFiltrados.filter(
+                          (p) =>
+                            p.categoria === 'Saladas Avulsas' ||
+                            p.nome.toLowerCase().includes('salada')
+                        ).length
+                      }{' '}
+                      opções
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {produtosFiltrados
+                      .filter(
+                        (p) =>
+                          p.categoria === 'Saladas Avulsas' ||
+                          p.nome.toLowerCase().includes('salada')
+                      )
+                      .map((prod) => {
+                        const imgProd = getImagemProduto(prod);
+                        const esgotado = prod.estoque !== undefined && prod.estoque <= 0;
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`bg-slate-900 border rounded-2xl overflow-hidden flex flex-col justify-between group transition-all ${
+                              esgotado
+                                ? 'border-red-950/40 opacity-70'
+                                : 'border-slate-800/80 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-black/50'
+                            }`}
+                          >
+                            <div>
+                              <div className="w-full h-44 bg-slate-950 relative overflow-hidden">
+                                <img
+                                  src={imgProd}
+                                  alt={prod.nome}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+                                <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-[10px] font-semibold text-emerald-300 border border-white/10">
+                                  Salada Fresca
+                                </span>
+                              </div>
+                              <div className="p-4 space-y-2">
+                                <h4 className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors">
+                                  {prod.nome}
+                                </h4>
+                                {prod.descricao && (
+                                  <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                    {prod.descricao}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="p-4 pt-0 space-y-3">
+                              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                                <span className="text-xs text-slate-400">Preço:</span>
+                                <span className="text-base font-extrabold text-emerald-400 font-mono">
+                                  {formatCurrency(prod.preco)}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={esgotado}
+                                onClick={() => handleAdicionarProduto(prod)}
+                                className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all ${
+                                  esgotado
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                }`}
+                              >
+                                <Plus className="w-4 h-4" />
+                                {esgotado ? 'Esgotado' : 'Adicionar à Sacola'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -2020,7 +2348,7 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                         </span>
                       ) : (
                         <span className="text-[10px] text-amber-400 font-semibold">
-                          +R$ 2,00 (Exige 2ª carne)
+                          Carne Especial
                         </span>
                       )}
                     </div>
@@ -2056,7 +2384,7 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                               <span>{carne.nome}</span>
                             </div>
                             <span className="text-[10px] text-purple-300 font-semibold">
-                              +R$ 2,00 (Exige 2ª carne)
+                              Especial
                             </span>
                           </button>
                         );
@@ -2082,11 +2410,11 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
                   </div>
                 )}
 
-                {temCarneEspecial && faltaSegundaCarne && (
+                {temCarneEspecial && carnesEscolhidasIds.length === 1 && (
                   <div className="p-3 bg-purple-950/40 border border-purple-500/40 rounded-xl text-xs text-purple-200 flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Regra de Carne Mista Especial:</strong> Você escolheu uma carne especial (+R$ 2,00). É obrigatório selecionar uma segunda carne tradicional para completar sua marmita.
+                      <strong>Carne Especial Selecionada:</strong> Você pode adicionar uma segunda carne normal ou manter apenas esta carne especial.
                     </div>
                   </div>
                 )}
@@ -2334,17 +2662,71 @@ export const PortalClienteDelivery: React.FC<PortalClienteDeliveryProps> = ({
         </div>
       )}
 
-      {/* Rodapé simples do Portal */}
-      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-5xl mx-auto px-4 space-y-1">
-          <p className="font-semibold text-slate-400">
-            {config.nomeRestaurante} — Churrascaria & Delivery
+      {/* Rodapé do Portal com Endereço, CEP e Redes Sociais */}
+      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 text-center text-xs text-slate-500">
+        <div className="max-w-5xl mx-auto px-4 space-y-3">
+          <p className="font-bold text-sm text-slate-300">
+            {config.nomeRestaurante || 'RESTAURANTE KERO'} — Marmitas na Brasa & Delivery Oficial
           </p>
-          <p>
-            {config.enderecoRestaurante} · Contato: {config.telefoneRestaurante}
+          <p className="text-slate-400">
+            {config.enderecoRestaurante || 'Atendimento Delivery'}
+            {config.cep ? ` · CEP ${config.cep}` : ''}
+            {config.telefoneRestaurante ? ` · Contato: ${config.telefoneRestaurante}` : ''}
           </p>
-          <p className="text-[11px] text-slate-600">
-            Sistema de Autoatendimento Delivery · CNPJ: {config.cnpj}
+
+          {/* Links para Redes Sociais */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2 border-t border-slate-900">
+            {config.instagram && (
+              <a
+                href={
+                  config.instagram.startsWith('http')
+                    ? config.instagram
+                    : `https://instagram.com/${config.instagram.replace('@', '')}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/20 transition-colors font-medium text-xs"
+              >
+                <Instagram className="w-3.5 h-3.5" />
+                <span>{config.instagram.startsWith('@') ? config.instagram : `@${config.instagram}`}</span>
+              </a>
+            )}
+
+            {config.facebook && (
+              <a
+                href={
+                  config.facebook.startsWith('http')
+                    ? config.facebook
+                    : `https://facebook.com/${config.facebook}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-colors font-medium text-xs"
+              >
+                <Facebook className="w-3.5 h-3.5" />
+                <span>Facebook</span>
+              </a>
+            )}
+
+            {(config.whatsapp || config.telefoneRestaurante) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const tel = (config.whatsapp || config.telefoneRestaurante || '').replace(/\D/g, '');
+                  if (tel) {
+                    window.open(`https://api.whatsapp.com/send?phone=55${tel}`, '_blank');
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-colors font-medium text-xs cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>WhatsApp: {config.whatsapp || config.telefoneRestaurante}</span>
+              </button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-slate-600 pt-2">
+            Sistema de Autoatendimento Delivery · CNPJ: {config.cnpj || '00.000.000/0001-00'} · Pedidos em Tempo Real
           </p>
         </div>
       </footer>

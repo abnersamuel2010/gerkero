@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Printer, CheckCircle2, Calendar, AlertTriangle, Check } from 'lucide-react';
+import { Plus, Trash2, Printer, CheckCircle2, Calendar, AlertTriangle, Check, Coffee, Cookie, Salad, ShoppingBag } from 'lucide-react';
 import {
   Produto,
   ConfiguracaoRestaurante,
@@ -48,6 +48,8 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
   const [observacaoItem, setObservacaoItem] = useState<string>('');
 
   const [carrinho, setCarrinho] = useState<NovoItemPedidoInput[]>([]);
+  const [abaCriacao, setAbaCriacao] = useState<'marmita' | 'produtos'>('marmita');
+  const [qtdProdutosAvulsos, setQtdProdutosAvulsos] = useState<Record<string, number>>({});
   const [clienteNome, setClienteNome] = useState<string>('Cliente Balcão');
   const [clienteTelefone, setClienteTelefone] = useState<string>('');
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix');
@@ -79,6 +81,35 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
   );
   const adicionaisLista = disponiveis.filter((p) => p.categoria === 'Adicionais');
   const bebidasLista = disponiveis.filter((p) => p.categoria === 'Bebidas');
+  const sobremesasLista = disponiveis.filter(
+    (p) =>
+      p.categoria === 'Doces e Sobremesas' ||
+      p.nome.toLowerCase().includes('doce') ||
+      p.nome.toLowerCase().includes('pudim') ||
+      p.nome.toLowerCase().includes('trufa') ||
+      p.nome.toLowerCase().includes('paçoca') ||
+      p.nome.toLowerCase().includes('canudo') ||
+      (p.categoria === 'Outros' && p.preco > 0)
+  );
+  const saladasAvulsasLista = disponiveis.filter(
+    (p) =>
+      p.categoria === 'Saladas Avulsas' ||
+      (p.categoria === 'Porções' && p.nome.toLowerCase().includes('salada')) ||
+      p.nome.toLowerCase().includes('salada')
+  );
+
+  const handleAdicionarProdutoAvulso = (prod: Produto) => {
+    const qtd = Math.max(1, qtdProdutosAvulsos[prod.id] || 1);
+    const novoItem: NovoItemPedidoInput = {
+      tipo: 'produto',
+      nome: prod.nome,
+      quantidade: qtd,
+      valorUnitario: prod.preco,
+    };
+    setCarrinho((prev) => [...prev, novoItem]);
+    // reset da quantidade desse produto
+    setQtdProdutosAvulsos((prev) => ({ ...prev, [prod.id]: 1 }));
+  };
 
   const obterPrecoBaseTamanho = (tam: 'Pequena' | 'Média' | 'Grande'): number => {
     if (tam === 'Pequena') return config.precoMarmitaP || 16;
@@ -96,7 +127,6 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
   const temDuasCarnesNormais =
     !temEspecial && carnesSelecionadasObjs.length === 2;
   const adicionalDuasCarnesNormais = temDuasCarnesNormais ? 2.0 : 0;
-  const faltaSegundaCarne = temEspecial && carnesSelecionadasObjs.length < 2;
 
   const valorExtrasCarnes =
     carnesSelecionadasObjs.reduce((acc, c) => acc + (c.preco || 0), 0) +
@@ -195,19 +225,12 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
       return;
     }
 
-    if (faltaSegundaCarne) {
-      alert(
-        'Regra de Carne Mista Especial: Carnes especiais (Feijoada e Costela) exigem obrigatoriamente a combinação com uma segunda carne tradicional.'
-      );
-      return;
-    }
-
     const diaObj = DIAS_DA_SEMANA.find((d) => d.key === diaSemana);
     const carnesNomes = carnesSelecionadasObjs.map((c) => c.nome).join(' + ');
     const detalheCarnes = temDuasCarnesNormais
-      ? ' (2 Carnes: +R$ 2,00)'
+      ? ' (2 Carnes Normais: +R$ 2,00)'
       : temEspecial
-      ? ' (Carne Mista Especial)'
+      ? ' (Carne Especial)'
       : '';
 
     const adicNomes = adicionaisSelecionados
@@ -348,8 +371,295 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
       )}
 
       <div className="grid lg:grid-cols-12 gap-6 items-start">
-        {/* Montador de Marmita (8 colunas) */}
+        {/* Montador de Marmita ou Produtos (7 colunas) */}
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+          {/* Navegação entre Montar Marmitas e Produtos Avulsos */}
+          <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setAbaCriacao('marmita')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                abaCriacao === 'marmita'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              1. Montar Marmitas Personalizadas
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbaCriacao('produtos')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                abaCriacao === 'produtos'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              2. Produtos (Bebidas, Sobremesas & Saladas)
+            </button>
+          </div>
+
+          {abaCriacao === 'produtos' ? (
+            /* SEÇÃO DE PRODUTOS AVULSOS EM TÓPICOS DIFERENTES */
+            <div className="space-y-8">
+              {/* Tópico A: Bebidas Geladas */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Coffee className="w-4 h-4 text-blue-600" />
+                    🥤 Bebidas Geladas & Água Mineral
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {bebidasLista.length} itens disponíveis
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {bebidasLista.map((beb) => {
+                    const qtd = qtdProdutosAvulsos[beb.id] || 1;
+                    return (
+                      <div
+                        key={beb.id}
+                        className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3 hover:border-amber-400/80 transition-all"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900">
+                              {beb.nome}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-amber-700 whitespace-nowrap">
+                              {formatCurrency(beb.preco)}
+                            </span>
+                          </div>
+                          {beb.descricao && (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
+                              {beb.descricao}
+                            </p>
+                          )}
+                          {beb.estoque !== undefined && (
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              Estoque: {beb.estoque} un.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center border border-slate-300 rounded-lg bg-white overflow-hidden text-xs">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [beb.id]: Math.max(1, qtd - 1),
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 py-1 font-mono font-semibold text-slate-900 min-w-[20px] text-center">
+                              {qtd}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [beb.id]: qtd + 1,
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAdicionarProdutoAvulso(beb)}
+                            className="flex-1 py-1.5 px-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tópico B: Doces e Sobremesas */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Cookie className="w-4 h-4 text-pink-600" />
+                    🍰 Doces & Sobremesas Artesanais
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {sobremesasLista.length} itens disponíveis
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {sobremesasLista.map((docItem) => {
+                    const qtd = qtdProdutosAvulsos[docItem.id] || 1;
+                    return (
+                      <div
+                        key={docItem.id}
+                        className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3 hover:border-amber-400/80 transition-all"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900">
+                              {docItem.nome}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-pink-700 whitespace-nowrap">
+                              {formatCurrency(docItem.preco)}
+                            </span>
+                          </div>
+                          {docItem.descricao && (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
+                              {docItem.descricao}
+                            </p>
+                          )}
+                          {docItem.estoque !== undefined && (
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              Estoque: {docItem.estoque} un.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center border border-slate-300 rounded-lg bg-white overflow-hidden text-xs">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [docItem.id]: Math.max(1, qtd - 1),
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 py-1 font-mono font-semibold text-slate-900 min-w-[20px] text-center">
+                              {qtd}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [docItem.id]: qtd + 1,
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAdicionarProdutoAvulso(docItem)}
+                            className="flex-1 py-1.5 px-2.5 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tópico C: Saladas Avulsas */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Salad className="w-4 h-4 text-emerald-600" />
+                    🥗 Saladas Avulsas & Frescas
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {saladasAvulsasLista.length} opções disponíveis
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {saladasAvulsasLista.map((sal) => {
+                    const qtd = qtdProdutosAvulsos[sal.id] || 1;
+                    return (
+                      <div
+                        key={sal.id}
+                        className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between gap-3 hover:border-amber-400/80 transition-all"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900">
+                              {sal.nome}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-emerald-700 whitespace-nowrap">
+                              {formatCurrency(sal.preco)}
+                            </span>
+                          </div>
+                          {sal.descricao && (
+                            <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
+                              {sal.descricao}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/80">
+                          <div className="flex items-center border border-slate-300 rounded-lg bg-white overflow-hidden text-xs">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [sal.id]: Math.max(1, qtd - 1),
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 py-1 font-mono font-semibold text-slate-900 min-w-[20px] text-center">
+                              {qtd}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQtdProdutosAvulsos((prev) => ({
+                                  ...prev,
+                                  [sal.id]: qtd + 1,
+                                }))
+                              }
+                              className="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAdicionarProdutoAvulso(sal)}
+                            className="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* SEÇÃO DE MONTAGEM DE MARMITA PERSONALIZADA */
+            <>
           {/* 1. Dia da Semana */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-800 flex items-center gap-1.5">
@@ -518,7 +828,7 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
                           <span>{carne.nome}</span>
                         </div>
                         <span className="text-[10px] text-purple-700 font-semibold">
-                          +R$ 2,00 (Exige 2ª carne)
+                          Especial
                         </span>
                       </button>
                     );
@@ -539,17 +849,17 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
               <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>
-                  <strong>2 Carnes Normais:</strong> Adicional de R$ 2,00 aplicado automaticamente no total.
+                  <strong>2 Carnes Normais Selecionadas:</strong> Adicional de R$ 2,00 aplicado automaticamente no valor total da marmita.
                 </span>
               </div>
             )}
 
-            {temEspecial && faltaSegundaCarne && (
-              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong>Regra de Carne Mista Especial:</strong> Você selecionou uma carne especial (+R$ 2,00). É obrigatório escolher mais uma carne tradicional para completar sua marmita.
-                </div>
+            {temEspecial && carnesSelecionadasIds.length === 1 && (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 flex items-center gap-2">
+                <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                <span>
+                  <strong>Carne Especial Selecionada:</strong> Você pode incluir uma segunda carne normal ou manter apenas esta carne especial.
+                </span>
               </div>
             )}
           </div>
@@ -697,6 +1007,8 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
               Adicionar Marmita ao Pedido
             </button>
           </div>
+            </>
+          )}
         </div>
 
         {/* Resumo e Fechamento do Pedido (5 colunas) */}
@@ -707,7 +1019,7 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
 
           {carrinho.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-lg">
-              Monte uma marmita ao lado e clique em &ldquo;Adicionar Marmita ao Pedido&rdquo;.
+              Monte uma marmita ou selecione produtos ao lado para incluir no pedido.
             </div>
           ) : (
             <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
@@ -717,23 +1029,34 @@ export const MarmitasPage: React.FC<MarmitasPageProps> = ({
                   className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-start justify-between gap-3"
                 >
                   <div className="space-y-1 text-xs">
-                    <div className="font-semibold text-slate-900">
+                    <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                        {item.tipo === 'marmita' ? 'Marmita' : 'Produto'}
+                      </span>
                       {item.quantidade}x {item.nome}
                     </div>
-                    <div className="text-slate-600">
-                      <strong>Carnes:</strong> {item.carnes}
-                    </div>
-                    <div className="text-slate-600">
-                      <strong>Acomp:</strong> {item.acompanhamentos}
-                    </div>
-                    {item.adicionais && (
-                      <div className="text-slate-600">
-                        <strong>Adicionais:</strong> {item.adicionais}
-                      </div>
-                    )}
-                    {item.bebidas && (
-                      <div className="text-slate-600">
-                        <strong>Bebida:</strong> {item.bebidas}
+                    {item.tipo === 'marmita' ? (
+                      <>
+                        <div className="text-slate-600">
+                          <strong>Carnes:</strong> {item.carnes}
+                        </div>
+                        <div className="text-slate-600">
+                          <strong>Acomp:</strong> {item.acompanhamentos}
+                        </div>
+                        {item.adicionais && (
+                          <div className="text-slate-600">
+                            <strong>Adicionais:</strong> {item.adicionais}
+                          </div>
+                        )}
+                        {item.bebidas && (
+                          <div className="text-slate-600">
+                            <strong>Bebida:</strong> {item.bebidas}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-slate-500 text-[11px]">
+                        Item avulso adicionado ao pedido
                       </div>
                     )}
                     {item.observacao && (

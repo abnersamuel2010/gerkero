@@ -44,6 +44,9 @@ export interface Categoria {
   criadoEm: string;
 }
 
+export type MarmitaTamanhoNome = 'Pequena' | 'Média' | 'Grande';
+export type CanalVendaProduto = 'ambos' | 'balcao' | 'delivery';
+
 export interface Produto {
   id: string;
   nome: string;
@@ -57,6 +60,8 @@ export interface Produto {
   diasSemana?: string[];
   ehEspecial?: boolean;
   exigeSegundaCarne?: boolean;
+  tamanhosPermitidos?: MarmitaTamanhoNome[];
+  canalVenda?: CanalVendaProduto;
   ehDadoDemonstracao?: boolean;
   criadoEm: string;
   atualizadoEm?: string;
@@ -269,12 +274,31 @@ export interface PedidoCozinha {
   atualizadoEm?: string;
 }
 
+export type SetorImpressao = 'cozinha' | 'caixa' | 'bar' | 'todos';
+
+export interface ImpressoraTermica {
+  id: string;
+  nome: string;
+  ip: string;
+  porta: number; // padrão 9100
+  setor: SetorImpressao;
+  larguraBobina: '80mm' | '58mm';
+  ativo: boolean;
+  modelo?: string;
+  criadoEm: string;
+  atualizadoEm?: string;
+}
+
 export interface ConfiguracaoRestaurante {
   id: string;
   nomeRestaurante: string;
   telefoneRestaurante?: string;
   enderecoRestaurante?: string;
+  cep?: string;
   cnpj?: string;
+  instagram?: string;
+  facebook?: string;
+  whatsapp?: string;
   precoMarmitaP: number;
   precoMarmitaM: number;
   precoMarmitaG: number;
@@ -282,6 +306,14 @@ export interface ConfiguracaoRestaurante {
   precoBuffetCrianca: number;
   precoBuffetKilo?: number;
   logoUrl?: string;
+  bannerUrl?: string;
+  corPrimaria?: string;
+  corTemaNome?: string;
+  corFundo?: string;
+  corFundoNome?: string;
+  corBotoes?: string;
+  iconeTema?: string;
+  iconeCustomUrl?: string;
   atualizadoEm: string;
 }
 

@@ -55,6 +55,8 @@
         "imagemUrl": { "type": "string", "maxLength": 600 },
         "disponivel": { "type": "boolean" },
         "ativo": { "type": "boolean" },
+        "tamanhosPermitidos": { "type": "array" },
+        "canalVenda": { "type": "string", "enum": ["ambos", "balcao", "delivery"] },
         "ehDadoDemonstracao": { "type": "boolean" },
         "criadoEm": { "type": "string", "maxLength": 40 },
         "atualizadoEm": { "type": "string", "maxLength": 40 }
@@ -289,23 +291,52 @@
     },
     "Configuracao": {
       "title": "Configuracao",
-      "description": "Configurações globais de preços de marmitas, buffet e dados do restaurante",
+      "description": "Configurações globais de preços de marmitas, buffet, identidade visual, cores e dados do restaurante",
       "type": "object",
       "properties": {
         "nomeRestaurante": { "type": "string", "maxLength": 120 },
         "telefoneRestaurante": { "type": "string", "maxLength": 30 },
         "enderecoRestaurante": { "type": "string", "maxLength": 240 },
+        "cep": { "type": "string", "maxLength": 20 },
         "cnpj": { "type": "string", "maxLength": 30 },
+        "instagram": { "type": "string", "maxLength": 100 },
+        "facebook": { "type": "string", "maxLength": 150 },
+        "whatsapp": { "type": "string", "maxLength": 30 },
         "precoMarmitaP": { "type": "number" },
         "precoMarmitaM": { "type": "number" },
         "precoMarmitaG": { "type": "number" },
         "precoBuffetAdulto": { "type": "number" },
         "precoBuffetCrianca": { "type": "number" },
         "precoBuffetKilo": { "type": "number" },
-        "logoUrl": { "type": "string", "maxLength": 500 },
+        "logoUrl": { "type": "string", "maxLength": 1000 },
+        "bannerUrl": { "type": "string", "maxLength": 1000 },
+        "corPrimaria": { "type": "string", "maxLength": 30 },
+        "corTemaNome": { "type": "string", "maxLength": 50 },
+        "corFundo": { "type": "string", "maxLength": 30 },
+        "corFundoNome": { "type": "string", "maxLength": 50 },
+        "corBotoes": { "type": "string", "maxLength": 30 },
+        "iconeTema": { "type": "string", "maxLength": 50 },
+        "iconeCustomUrl": { "type": "string", "maxLength": 1000 },
         "atualizadoEm": { "type": "string", "maxLength": 40 }
       },
       "required": ["nomeRestaurante", "precoMarmitaP", "precoMarmitaM", "precoMarmitaG", "precoBuffetAdulto", "precoBuffetCrianca", "atualizadoEm"]
+    },
+    "ImpressoraTermica": {
+      "title": "ImpressoraTermica",
+      "description": "Impressora térmica conectada via IP para automação de impressão de pedidos",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 100 },
+        "ip": { "type": "string", "maxLength": 50 },
+        "porta": { "type": "number" },
+        "setor": { "type": "string", "enum": ["cozinha", "caixa", "bar", "todos"] },
+        "larguraBobina": { "type": "string", "enum": ["80mm", "58mm"] },
+        "modelo": { "type": "string", "maxLength": 60 },
+        "ativo": { "type": "boolean" },
+        "criadoEm": { "type": "string", "maxLength": 40 },
+        "atualizadoEm": { "type": "string", "maxLength": 40 }
+      },
+      "required": ["nome", "ip", "porta", "setor", "larguraBobina", "ativo", "criadoEm"]
     },
     "LogAuditoria": {
       "title": "LogAuditoria",
@@ -393,6 +424,10 @@
     "/logsAuditoria/{logId}": {
       "schema": { "$ref": "#/entities/LogAuditoria" },
       "description": "Logs de auditoria de segurança"
+    },
+    "/impressoras/{impressoraId}": {
+      "schema": { "$ref": "#/entities/ImpressoraTermica" },
+      "description": "Impressoras térmicas IP por setor"
     }
   }
 }

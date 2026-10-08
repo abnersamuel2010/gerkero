@@ -4,6 +4,7 @@ import { db, storage, handleFirestoreError, OperationType } from '../firebase/co
 import { Produto, CategoriaNome } from '../types';
 import { generateSafeId } from '../utils/formatters';
 import { registrarLogAuditoria } from './authService';
+import { processarImagemParaDataUrl } from '../utils/imagemHelper';
 
 export async function criarProduto(dados: {
   nome: string;
@@ -17,6 +18,8 @@ export async function criarProduto(dados: {
   diasSemana?: string[];
   ehEspecial?: boolean;
   exigeSegundaCarne?: boolean;
+  tamanhosPermitidos?: ('Pequena' | 'Média' | 'Grande')[];
+  canalVenda?: 'ambos' | 'balcao' | 'delivery';
   ehDadoDemonstracao?: boolean;
 }): Promise<string> {
   const id = generateSafeId('prod');
@@ -29,6 +32,7 @@ export async function criarProduto(dados: {
       preco: Math.max(0, Number(dados.preco) || 0),
       disponivel: Boolean(dados.disponivel),
       ativo: Boolean(dados.ativo),
+      canalVenda: dados.canalVenda || 'ambos',
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     };
@@ -46,6 +50,12 @@ export async function criarProduto(dados: {
     }
     if (typeof dados.exigeSegundaCarne === 'boolean') {
       payload.exigeSegundaCarne = Boolean(dados.exigeSegundaCarne);
+    }
+    if (Array.isArray(dados.tamanhosPermitidos)) {
+      payload.tamanhosPermitidos = dados.tamanhosPermitidos;
+    }
+    if (dados.canalVenda) {
+      payload.canalVenda = dados.canalVenda;
     }
     if (typeof dados.ehDadoDemonstracao === 'boolean') {
       payload.ehDadoDemonstracao = dados.ehDadoDemonstracao;
@@ -81,6 +91,8 @@ export async function atualizarProduto(
     if (dados.diasSemana !== undefined) updateData.diasSemana = dados.diasSemana;
     if (dados.ehEspecial !== undefined) updateData.ehEspecial = Boolean(dados.ehEspecial);
     if (dados.exigeSegundaCarne !== undefined) updateData.exigeSegundaCarne = Boolean(dados.exigeSegundaCarne);
+    if (dados.tamanhosPermitidos !== undefined) updateData.tamanhosPermitidos = dados.tamanhosPermitidos;
+    if (dados.canalVenda !== undefined) updateData.canalVenda = dados.canalVenda;
 
     await updateDoc(doc(db, 'produtos', id), updateData);
     await registrarLogAuditoria(
@@ -123,8 +135,13 @@ export async function excluirProduto(id: string, nome: string): Promise<void> {
 }
 
 export async function uploadImagemProduto(file: File): Promise<string> {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const storageRef = ref(storage, `produtos/${Date.now()}_${safeName}`);
-  await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageRef = ref(storage, `produtos/${Date.now()}_${safeName}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  } catch (error) {
+    console.warn('Firebase Storage offline ou sem permissão. Convertendo localmente:', error);
+    return await processarImagemParaDataUrl(file, 800, 0.88);
+  }
 }

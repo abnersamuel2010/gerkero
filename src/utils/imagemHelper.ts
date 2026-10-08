@@ -119,3 +119,80 @@ export function obterImagemProduto(prod: {
   // Fallback padrão
   return imgCarnesGrelhadas;
 }
+
+/**
+ * Converte um arquivo de imagem para Base64 Data URL, redimensionando e comprimindo
+ * para caber com folga no Firestore e carregar instantaneamente no navegador.
+ */
+export function processarImagemParaDataUrl(
+  file: File,
+  maxDim: number = 800,
+  qualidade: number = 0.88
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('Nenhum arquivo fornecido'));
+      return;
+    }
+
+    // Se for SVG, preserva como vetor puro
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo SVG'));
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Falha ao ler arquivo de imagem'));
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Formato de leitura inválido'));
+        return;
+      }
+
+      const img = new Image();
+      img.onerror = () => {
+        // Se falhar ao carregar no Image(), devolve a data URL bruta
+        resolve(result);
+      };
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            resolve(result);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Se for PNG transparente, tenta manter PNG ou WebP
+          const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(mime, qualidade);
+          resolve(dataUrl);
+        } catch {
+          resolve(result);
+        }
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  });
+}

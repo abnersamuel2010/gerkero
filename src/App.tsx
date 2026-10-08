@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/config';
 import {
@@ -37,6 +37,7 @@ import {
   ConfiguracaoRestaurante,
   Cliente,
   LogAuditoria,
+  ImpressoraTermica,
   ThermalReceiptData,
 } from './types';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -108,6 +109,7 @@ export default function App() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [logsAuditoria, setLogsAuditoria] = useState<LogAuditoria[]>([]);
+  const [impressoras, setImpressoras] = useState<ImpressoraTermica[]>([]);
 
   // 1. Monitorar estado de autenticação do Firebase
   useEffect(() => {
@@ -164,6 +166,7 @@ export default function App() {
       subscribeCollection<Usuario>('usuarios', setUsuarios),
       subscribeCollection<Cliente>('clientes', setClientes),
       subscribeCollection<LogAuditoria>('logsAuditoria', setLogsAuditoria),
+      subscribeCollection<ImpressoraTermica>('impressoras', setImpressoras),
     ];
 
     return () => {
@@ -241,8 +244,47 @@ export default function App() {
     }
   }, [authReady, usuarioAtual, produtos]);
 
-  const configAtual =
-    configList.find((c) => c.id === 'geral') || configList[0] || CONFIG_PADRAO;
+  const configSalvaLocal = useMemo(() => {
+    try {
+      const item = localStorage.getItem('kero_configuracao_local');
+      if (item) return JSON.parse(item);
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
+  const configDoc = configList.find((c) => c.id === 'geral') || configList[0];
+  const configAtual: ConfiguracaoRestaurante = useMemo(() => {
+    return {
+      ...CONFIG_PADRAO,
+      ...(configSalvaLocal || {}),
+      ...(configDoc || {}),
+    };
+  }, [configDoc, configSalvaLocal]);
+
+  // Atualizar variáveis CSS globais, título da aba e favicon
+  useEffect(() => {
+    if (configAtual.corPrimaria) {
+      document.documentElement.style.setProperty('--cor-primaria', configAtual.corPrimaria);
+    }
+    if (configAtual.corFundo) {
+      document.documentElement.style.setProperty('--cor-fundo', configAtual.corFundo);
+    }
+    if (configAtual.corBotoes) {
+      document.documentElement.style.setProperty('--cor-botoes', configAtual.corBotoes);
+    }
+    if (configAtual.nomeRestaurante) {
+      document.title = `${configAtual.nomeRestaurante} — Sistema de Gestão & Delivery`;
+    }
+    const faviconUrl = configAtual.logoUrl || configAtual.iconeCustomUrl;
+    if (faviconUrl) {
+      const link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (link) {
+        link.href = faviconUrl;
+      }
+    }
+  }, [configAtual]);
 
   if (!authReady) {
     return (
@@ -341,6 +383,9 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col">
         <TopBar
           nomeRestaurante={configAtual.nomeRestaurante}
+          corPrimaria={configAtual.corPrimaria}
+          iconeTema={configAtual.iconeTema}
+          logoUrl={configAtual.logoUrl}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           onOpenBancoModal={() => setModalBancoAberto(true)}
@@ -359,6 +404,10 @@ export default function App() {
             deliveryNovosCount={deliveryNovosCount}
             mobileOpen={mobileMenuOpen}
             setMobileOpen={setMobileMenuOpen}
+            corPrimaria={configAtual.corPrimaria}
+            iconeTema={configAtual.iconeTema}
+            nomeRestaurante={configAtual.nomeRestaurante}
+            logoUrl={configAtual.logoUrl}
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto overflow-x-hidden">
@@ -491,6 +540,7 @@ export default function App() {
                 config={configAtual}
                 logsAuditoria={logsAuditoria}
                 regioes={regioesEntrega}
+                impressoras={impressoras}
               />
             )}
           </main>

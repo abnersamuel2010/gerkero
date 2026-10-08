@@ -7,6 +7,7 @@ import {
   Plus,
   Trash2,
   Share2,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Pedido,
@@ -16,7 +17,7 @@ import {
   Caixa,
   ThermalReceiptData,
 } from '../types';
-import { atualizarStatusPedido } from '../services/pedidosService';
+import { atualizarStatusPedido, excluirPedidoDefinitivo } from '../services/pedidosService';
 import {
   atribuirPedidoAoEntregador,
   criarRegiaoEntrega,
@@ -62,6 +63,22 @@ export const DeliveryKanbanPage: React.FC<DeliveryKanbanPageProps> = ({
   const [nomeRegiao, setNomeRegiao] = useState('');
   const [taxaRegiao, setTaxaRegiao] = useState('8.00');
   const [tempoRegiao, setTempoRegiao] = useState('35');
+  const [pedidoParaExcluir, setPedidoParaExcluir] = useState<Pedido | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  const handleConfirmarExclusao = async () => {
+    if (!pedidoParaExcluir) return;
+    try {
+      setExcluindo(true);
+      await excluirPedidoDefinitivo(pedidoParaExcluir.id);
+      setPedidoParaExcluir(null);
+    } catch (err) {
+      console.error('Erro ao excluir pedido no Kanban:', err);
+      alert('Não foi possível excluir o pedido. Verifique as permissões.');
+    } finally {
+      setExcluindo(false);
+    }
+  };
 
   const pedidosDelivery = pedidos
     .filter((p) => p.origem === 'delivery' && p.status !== 'cancelado')
@@ -265,7 +282,7 @@ export const DeliveryKanbanPage: React.FC<DeliveryKanbanPageProps> = ({
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
                         <button
                           type="button"
                           onClick={() => handleImprimirDelivery(ped)}
@@ -273,6 +290,15 @@ export const DeliveryKanbanPage: React.FC<DeliveryKanbanPageProps> = ({
                           title="Imprimir Cupom"
                         >
                           <Printer className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPedidoParaExcluir(ped)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Excluir este pedido definitivamente"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
 
                         {ped.status !== 'entregue' && (
@@ -381,6 +407,52 @@ export const DeliveryKanbanPage: React.FC<DeliveryKanbanPageProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Excluir Pedido Definitivamente */}
+      {pedidoParaExcluir && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Excluir Pedido #{pedidoParaExcluir.numero}?
+                </h3>
+                <p className="text-xs text-slate-500">Ação irreversível</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Tem certeza que deseja excluir o pedido de{' '}
+              <strong>{pedidoParaExcluir.clienteNome}</strong> no valor de{' '}
+              <strong>{formatCurrency(pedidoParaExcluir.total)}</strong>?
+              Esta ação removerá este pedido da Cozinha (KDS), da Central de Pedidos e do Delivery.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={() => setPedidoParaExcluir(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={handleConfirmarExclusao}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {excluindo ? 'Excluindo...' : 'Sim, Excluir Pedido'}
+              </button>
             </div>
           </div>
         </div>

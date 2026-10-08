@@ -64,20 +64,26 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
   ]);
   const [ehEspecial, setEhEspecial] = useState(false);
   const [exigeSegundaCarne, setExigeSegundaCarne] = useState(false);
+  const [tamanhosPermitidos, setTamanhosPermitidos] = useState<
+    ('Pequena' | 'Média' | 'Grande')[]
+  >(['Pequena', 'Média', 'Grande']);
+  const [canalVenda, setCanalVenda] = useState<'ambos' | 'balcao' | 'delivery'>('ambos');
   const [salvando, setSalvando] = useState(false);
   const [fazendoUpload, setFazendoUpload] = useState(false);
 
   const abrirModalNovo = () => {
     setEditandoId(null);
     setNome('');
-    setCategoria('Marmitas');
+    setCategoria('Carnes');
     setDescricao('');
-    setPreco('25.00');
+    setPreco('0.00');
     setImagemUrl('');
     setEstoque('');
     setDiasSemana(['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']);
     setEhEspecial(false);
     setExigeSegundaCarne(false);
+    setTamanhosPermitidos(['Pequena', 'Média', 'Grande']);
+    setCanalVenda('ambos');
     setDisponivel(true);
     setAtivo(true);
     setModalAberto(true);
@@ -98,6 +104,14 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
     );
     setEhEspecial(Boolean(prod.ehEspecial));
     setExigeSegundaCarne(Boolean(prod.exigeSegundaCarne));
+    setTamanhosPermitidos(
+      prod.tamanhosPermitidos && prod.tamanhosPermitidos.length > 0
+        ? prod.tamanhosPermitidos
+        : prod.ehEspecial
+        ? ['Média', 'Grande']
+        : ['Pequena', 'Média', 'Grande']
+    );
+    setCanalVenda(prod.canalVenda || 'ambos');
     setDisponivel(prod.disponivel);
     setAtivo(prod.ativo);
     setModalAberto(true);
@@ -139,6 +153,8 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
           diasSemana,
           ehEspecial,
           exigeSegundaCarne,
+          tamanhosPermitidos,
+          canalVenda,
           ehDadoDemonstracao: false,
         });
       } else {
@@ -154,6 +170,8 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
           diasSemana,
           ehEspecial,
           exigeSegundaCarne,
+          tamanhosPermitidos,
+          canalVenda,
           ehDadoDemonstracao: false,
         });
       }
@@ -322,7 +340,7 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
                     {cleanDemoTag(prod.nome)}
                   </h3>
 
-                  {/* Badges de Estoque, Dias da Semana e Especial */}
+                  {/* Badges de Estoque, Dias da Semana, Canal e Tamanhos */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     {prod.estoque !== undefined && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium">
@@ -330,6 +348,36 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
                         Estoque: {prod.estoque} un
                       </span>
                     )}
+
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                        prod.canalVenda === 'balcao'
+                          ? 'bg-orange-50 text-orange-800 border-orange-200'
+                          : prod.canalVenda === 'delivery'
+                          ? 'bg-blue-50 text-blue-800 border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {prod.canalVenda === 'balcao'
+                        ? '🏪 Só Balcão'
+                        : prod.canalVenda === 'delivery'
+                        ? '🛵 Só Delivery'
+                        : '🏪🛵 Ambos'}
+                    </span>
+
+                    {(prod.categoria === 'Carnes' ||
+                      prod.categoria === 'Carnes Especiais' ||
+                      prod.tamanhosPermitidos) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold">
+                        🍱 Tam:{' '}
+                        {prod.tamanhosPermitidos
+                          ? prod.tamanhosPermitidos.map((t) => t[0]).join(', ')
+                          : prod.ehEspecial
+                          ? 'M, G'
+                          : 'P, M, G'}
+                      </span>
+                    )}
+
                     {prod.ehEspecial && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold">
                         Especial {prod.preco > 0 ? `(+${formatCurrency(prod.preco)})` : ''}
@@ -576,16 +624,81 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
                 </p>
               </div>
 
+              {/* Seleção dos Tamanhos de Marmita Permitidos para esta Carne */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800">
+                    🍱 Tamanhos de Marmita em que esta Carne pode ir:
+                  </label>
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setTamanhosPermitidos(['Pequena', 'Média', 'Grande'])}
+                      className="text-amber-700 hover:underline font-semibold"
+                    >
+                      Todos (P, M, G)
+                    </button>
+                    <span>·</span>
+                    <button
+                      type="button"
+                      onClick={() => setTamanhosPermitidos(['Média', 'Grande'])}
+                      className="text-purple-700 hover:underline font-semibold"
+                    >
+                      Apenas M e G
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Pequena', 'Média', 'Grande'] as const).map((tam) => {
+                    const marcado = tamanhosPermitidos.includes(tam);
+                    return (
+                      <button
+                        key={tam}
+                        type="button"
+                        onClick={() => {
+                          setTamanhosPermitidos((prev) =>
+                            prev.includes(tam)
+                              ? prev.length > 1
+                                ? prev.filter((t) => t !== tam)
+                                : prev
+                              : [...prev, tam]
+                          );
+                        }}
+                        className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                          marcado
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{marcado ? '✓' : ''}</span>
+                        <span>Marmita {tam}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  * Configure se a carne vai em todas ou apenas nas marmitas Média e Grande (como carnes nobres/especiais).
+                </p>
+              </div>
+
               {/* Opções de Carnes Especiais */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={ehEspecial}
-                    onChange={(e) => setEhEspecial(e.target.checked)}
+                    onChange={(e) => {
+                      const val = e.target.checked;
+                      setEhEspecial(val);
+                      if (val) {
+                        // Carnes especiais vão apenas na Média e Grande
+                        setTamanhosPermitidos(['Média', 'Grande']);
+                      }
+                    }}
                     className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                   />
-                  Carne Especial (+Taxa adicional)
+                  Carne Especial (Restringe para Média e Grande)
                 </label>
 
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
@@ -595,8 +708,42 @@ export const CardapioPage: React.FC<CardapioPageProps> = ({
                     onChange={(e) => setExigeSegundaCarne(e.target.checked)}
                     className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                   />
-                  Exige 2ª Carne (Regra Carne Mista)
+                  Permite 2ª Carne Mista
                 </label>
+              </div>
+
+              {/* Seleção do Canal de Venda (Balcão / Delivery / Ambos) */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-800">
+                  🛵 Canal de Venda (Onde este produto será vendido):
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'ambos', label: 'Ambos (Balcão & Delivery)', icone: '🏪🛵' },
+                    { id: 'balcao', label: 'Apenas Balcão / Salão', icone: '🏪' },
+                    { id: 'delivery', label: 'Apenas Delivery Online', icone: '🛵' },
+                  ].map((canal) => {
+                    const selecionado = canalVenda === canal.id;
+                    return (
+                      <button
+                        key={canal.id}
+                        type="button"
+                        onClick={() => setCanalVenda(canal.id as 'ambos' | 'balcao' | 'delivery')}
+                        className={`py-2 px-2 rounded-lg text-xs font-semibold border transition-all flex flex-col items-center justify-center gap-1 ${
+                          selecionado
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs ring-1 ring-slate-900'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-sm">{canal.icone}</span>
+                        <span className="text-[11px] text-center leading-tight">{canal.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  * Produtos marcados como "Apenas Balcão" não serão exibidos no site de delivery do cliente.
+                </p>
               </div>
 
               <div className="flex items-center gap-6 pt-1">

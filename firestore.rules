@@ -92,7 +92,7 @@ service cloud.firestore {
 
     function isValidProduto(data) {
       return data.keys().hasAll(['nome', 'categoria', 'descricao', 'preco', 'disponivel', 'ativo', 'criadoEm']) &&
-        data.keys().hasOnly(['nome', 'categoria', 'descricao', 'preco', 'imagemUrl', 'disponivel', 'ativo', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'ehDadoDemonstracao', 'criadoEm', 'atualizadoEm']) &&
+        data.keys().hasOnly(['nome', 'categoria', 'descricao', 'preco', 'imagemUrl', 'disponivel', 'ativo', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'tamanhosPermitidos', 'canalVenda', 'ehDadoDemonstracao', 'criadoEm', 'atualizadoEm']) &&
         data.nome is string && data.nome.size() >= 1 && data.nome.size() <= 120 &&
         data.categoria is string && data.categoria in ['Marmitas', 'Carnes', 'Carnes Especiais', 'Acompanhamentos', 'Bebidas', 'Porções', 'Adicionais', 'Buffet', 'Doces e Sobremesas', 'Saladas Avulsas', 'Outros'] &&
         data.descricao is string && data.descricao.size() <= 400 &&
@@ -105,6 +105,8 @@ service cloud.firestore {
         (!('diasSemana' in data) || (data.diasSemana is list)) &&
         (!('ehEspecial' in data) || (data.ehEspecial is bool)) &&
         (!('exigeSegundaCarne' in data) || (data.exigeSegundaCarne is bool)) &&
+        (!('tamanhosPermitidos' in data) || (data.tamanhosPermitidos is list)) &&
+        (!('canalVenda' in data) || (data.canalVenda is string && data.canalVenda in ['ambos', 'balcao', 'delivery'])) &&
         (!('ehDadoDemonstracao' in data) || (data.ehDadoDemonstracao is bool)) &&
         (!('atualizadoEm' in data) || (data.atualizadoEm is string && data.atualizadoEm.size() <= 40));
     }
@@ -301,7 +303,13 @@ service cloud.firestore {
 
     function isValidConfiguracao(data) {
       return data.keys().hasAll(['nomeRestaurante', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'atualizadoEm']) &&
-        data.keys().hasOnly(['nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cnpj', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo', 'logoUrl', 'atualizadoEm']) &&
+        data.keys().hasOnly([
+          'nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cep', 'cnpj',
+          'instagram', 'facebook', 'whatsapp',
+          'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo',
+          'logoUrl', 'bannerUrl', 'corPrimaria', 'corTemaNome', 'corFundo', 'corFundoNome', 'corBotoes',
+          'iconeTema', 'iconeCustomUrl', 'atualizadoEm'
+        ]) &&
         data.nomeRestaurante is string && data.nomeRestaurante.size() >= 1 && data.nomeRestaurante.size() <= 120 &&
         data.precoMarmitaP is number && data.precoMarmitaP >= 0 &&
         data.precoMarmitaM is number && data.precoMarmitaM >= 0 &&
@@ -309,11 +317,23 @@ service cloud.firestore {
         data.precoBuffetAdulto is number && data.precoBuffetAdulto >= 0 &&
         data.precoBuffetCrianca is number && data.precoBuffetCrianca >= 0 &&
         data.atualizadoEm is string && data.atualizadoEm.size() <= 40 &&
-        (!('telefoneRestaurante' in data) || (data.telefoneRestaurante is string && data.telefoneRestaurante.size() <= 30)) &&
-        (!('enderecoRestaurante' in data) || (data.enderecoRestaurante is string && data.enderecoRestaurante.size() <= 240)) &&
-        (!('cnpj' in data) || (data.cnpj is string && data.cnpj.size() <= 30)) &&
+        (!('telefoneRestaurante' in data) || (data.telefoneRestaurante is string && data.telefoneRestaurante.size() <= 40)) &&
+        (!('enderecoRestaurante' in data) || (data.enderecoRestaurante is string && data.enderecoRestaurante.size() <= 300)) &&
+        (!('cep' in data) || (data.cep is string && data.cep.size() <= 30)) &&
+        (!('cnpj' in data) || (data.cnpj is string && data.cnpj.size() <= 40)) &&
+        (!('instagram' in data) || (data.instagram is string && data.instagram.size() <= 200)) &&
+        (!('facebook' in data) || (data.facebook is string && data.facebook.size() <= 200)) &&
+        (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 40)) &&
         (!('precoBuffetKilo' in data) || (data.precoBuffetKilo is number && data.precoBuffetKilo >= 0)) &&
-        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 500));
+        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 1000000)) &&
+        (!('bannerUrl' in data) || (data.bannerUrl is string && data.bannerUrl.size() <= 1000000)) &&
+        (!('corPrimaria' in data) || (data.corPrimaria is string && data.corPrimaria.size() <= 50)) &&
+        (!('corTemaNome' in data) || (data.corTemaNome is string && data.corTemaNome.size() <= 60)) &&
+        (!('corFundo' in data) || (data.corFundo is string && data.corFundo.size() <= 50)) &&
+        (!('corFundoNome' in data) || (data.corFundoNome is string && data.corFundoNome.size() <= 60)) &&
+        (!('corBotoes' in data) || (data.corBotoes is string && data.corBotoes.size() <= 50)) &&
+        (!('iconeTema' in data) || (data.iconeTema is string && data.iconeTema.size() <= 60)) &&
+        (!('iconeCustomUrl' in data) || (data.iconeCustomUrl is string && data.iconeCustomUrl.size() <= 1000000));
     }
 
     function isValidLogAuditoria(data) {
@@ -376,7 +396,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(produtoId) && isValidProduto(incoming()) && isActiveStaff();
       allow update: if isSignedIn() && isValidId(produtoId) && isValidProduto(incoming()) && (
         isAdmin() ||
-        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['disponivel', 'ativo', 'preco', 'nome', 'descricao', 'categoria', 'imagemUrl', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'ehDadoDemonstracao', 'atualizadoEm']))
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['disponivel', 'ativo', 'preco', 'nome', 'descricao', 'categoria', 'imagemUrl', 'estoque', 'diasSemana', 'ehEspecial', 'exigeSegundaCarne', 'tamanhosPermitidos', 'canalVenda', 'ehDadoDemonstracao', 'atualizadoEm']))
       );
       allow delete: if isSignedIn() && isValidId(produtoId) && isAdmin();
     }
@@ -526,7 +546,13 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(configId) && isValidConfiguracao(incoming()) && isActiveStaff();
       allow update: if isSignedIn() && isValidId(configId) && isValidConfiguracao(incoming()) && (
         isAdmin() ||
-        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly(['nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cnpj', 'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo', 'logoUrl', 'atualizadoEm']))
+        (isActiveStaff() && incoming().diff(existing()).affectedKeys().hasOnly([
+          'nomeRestaurante', 'telefoneRestaurante', 'enderecoRestaurante', 'cep', 'cnpj',
+          'instagram', 'facebook', 'whatsapp',
+          'precoMarmitaP', 'precoMarmitaM', 'precoMarmitaG', 'precoBuffetAdulto', 'precoBuffetCrianca', 'precoBuffetKilo',
+          'logoUrl', 'bannerUrl', 'corPrimaria', 'corTemaNome', 'corFundo', 'corFundoNome', 'corBotoes',
+          'iconeTema', 'iconeCustomUrl', 'atualizadoEm'
+        ]))
       );
       allow delete: if isSignedIn() && isValidId(configId) && isAdmin();
     }
@@ -538,6 +564,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(logId) && isValidLogAuditoria(incoming());
       allow update: if false;
       allow delete: if false;
+    }
+
+    // 19. Impressoras Termicas IP Collection
+    match /impressoras/{impressoraId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && (isAdmin() || isActiveStaff());
     }
   }
 }

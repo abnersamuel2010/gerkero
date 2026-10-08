@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Clock, Printer, Play, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Clock, Printer, Play, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react';
 import {
   PedidoCozinha,
   StatusCozinha,
@@ -7,6 +7,7 @@ import {
   ThermalReceiptData,
 } from '../types';
 import { atualizarStatusCozinhaKDS } from '../services/cozinhaService';
+import { excluirPedidoDefinitivo } from '../services/pedidosService';
 import {
   formatTimeOnly,
   formatDateTime,
@@ -26,10 +27,24 @@ export const CozinhaKDSPage: React.FC<CozinhaKDSPageProps> = ({
 }) => {
   // Atualiza o relógio a cada 30s para recalcular tempo de espera
   const [, setTick] = useState(0);
+  const [ordemParaExcluir, setOrdemParaExcluir] = useState<PedidoCozinha | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleConfirmarExcluir = async () => {
+    if (!ordemParaExcluir) return;
+    setExcluindo(true);
+    try {
+      await excluirPedidoDefinitivo(ordemParaExcluir.referenciaId, ordemParaExcluir.numero);
+      setOrdemParaExcluir(null);
+    } finally {
+      setExcluindo(false);
+    }
+  };
 
   const ordensAtivas = [...pedidosCozinha]
     .filter((k) => k.status !== 'finalizado')
@@ -171,6 +186,15 @@ export const CozinhaKDSPage: React.FC<CozinhaKDSPageProps> = ({
                             <Printer className="w-4 h-4" />
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => setOrdemParaExcluir(item)}
+                            className="p-2 bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-red-300 rounded-lg transition-colors"
+                            title="Excluir pedido da cozinha e do sistema"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
                           {item.status === 'novo' && (
                             <button
                               type="button"
@@ -226,6 +250,51 @@ export const CozinhaKDSPage: React.FC<CozinhaKDSPageProps> = ({
           );
         })}
       </div>
+
+      {/* Modal de Confirmação para Excluir da Cozinha */}
+      {ordemParaExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-800 text-white">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-3 bg-red-950/80 rounded-full border border-red-800">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  Excluir Pedido #{ordemParaExcluir.numero}?
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {ordemParaExcluir.identificacao}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Deseja remover este pedido permanentemente da cozinha e de todo o sistema? Esta ação cancela e remove o registro do banco de dados.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={() => setOrdemParaExcluir(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluindo}
+                onClick={handleConfirmarExcluir}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-xl transition-colors shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                {excluindo ? 'Excluindo...' : 'Sim, Excluir Pedido'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
